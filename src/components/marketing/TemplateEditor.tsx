@@ -33,7 +33,7 @@ interface TemplateEditorProps {
 
 export function TemplateEditor({ templateId }: TemplateEditorProps) {
   const navigate = useNavigate();
-  const { user } = useSession();
+  const { profile } = useSession();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 

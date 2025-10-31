@@ -1,7 +1,7 @@
-import { UserRole } from '@/types/user';
-
 // RBAC matrix - defines what each role can do
-const permissions: Record<UserRole, Record<string, string[]>> = {
+type Role = 'owner' | 'manager' | 'staff';
+
+const permissions: Record<Role, Record<string, string[]>> = {
   owner: {
     users: ['create', 'read', 'update', 'delete'],
     contacts: ['create', 'read', 'update', 'delete'],
@@ -41,7 +41,7 @@ const permissions: Record<UserRole, Record<string, string[]>> = {
   },
 };
 
-export function can(role: UserRole, action: string, resource: string): boolean {
+export function can(role: Role, action: string, resource: string): boolean {
   const rolePermissions = permissions[role];
   if (!rolePermissions) return false;
 
@@ -52,7 +52,7 @@ export function can(role: UserRole, action: string, resource: string): boolean {
 }
 
 // Helper function to check permissions with current user
-export function canCurrentUser(action: string, resource: string, userRole?: UserRole): boolean {
+export function canCurrentUser(action: string, resource: string, userRole?: Role): boolean {
   if (!userRole) return false;
   return can(userRole, action, resource);
 }

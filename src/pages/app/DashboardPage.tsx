@@ -17,7 +17,7 @@ import { Sparkles, Plus } from "lucide-react";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const { currentOrg } = useSession();
+  const { organization } = useSession();
   const { contacts, deals, tasks } = useCRMStore();
   
   // Check if this is a new organization with no data

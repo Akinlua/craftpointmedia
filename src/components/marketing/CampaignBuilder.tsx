@@ -18,7 +18,7 @@ import { ChevronLeft, ChevronRight, Send, Save } from 'lucide-react';
 
 export function CampaignBuilder() {
   const navigate = useNavigate();
-  const { user } = useSession();
+  const { profile } = useSession();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   

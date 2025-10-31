@@ -11,7 +11,7 @@ import { GlobalSearchModal } from "@/components/search/GlobalSearchModal";
 import { NotificationPanel } from "@/components/notifications/NotificationPanel";
 
 const TopBar = () => {
-  const { user, currentOrg, logout } = useSession();
+  const { profile, organization, logout } = useSession();
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
   
