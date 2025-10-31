@@ -520,10 +520,11 @@ const ContactDetailPage = () => {
       </div>
 
       {/* Modals */}
-      <EditContactModal 
+      <EditContactModal
         contact={contact}
         open={editModalOpen}
         onOpenChange={setEditModalOpen}
+        onUpdated={() => contact && loadContact(contact.id)}
       />
       
       <DeleteConfirmationDialog

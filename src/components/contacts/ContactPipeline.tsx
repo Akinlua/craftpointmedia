@@ -4,12 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Contact, LeadStage } from "@/types/contact";
-import { useCRMStore } from "@/lib/stores/crmStore";
+import { contactsApi } from "@/lib/api/contacts";
 import { Mail, Phone, Building2, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ContactPipelineProps {
   contacts: Contact[];
+  onContactUpdated?: () => void;
 }
 
 const leadStages = [
@@ -19,8 +20,7 @@ const leadStages = [
   { id: 'closed', title: 'Closed', color: 'bg-green-100 dark:bg-green-900' }
 ];
 
-export function ContactPipeline({ contacts }: ContactPipelineProps) {
-  const { updateContactStage } = useCRMStore();
+export function ContactPipeline({ contacts, onContactUpdated }: ContactPipelineProps) {
   const { toast } = useToast();
   const [draggedContact, setDraggedContact] = useState<Contact | null>(null);
 
@@ -38,16 +38,26 @@ export function ContactPipeline({ contacts }: ContactPipelineProps) {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (e: React.DragEvent, targetStage: string) => {
+  const handleDrop = async (e: React.DragEvent, targetStage: string) => {
     e.preventDefault();
     
     if (draggedContact && draggedContact.leadStage !== targetStage) {
-      updateContactStage(draggedContact.id, targetStage);
-      
-      toast({
-        title: "Contact moved",
-        description: `${draggedContact.firstName} ${draggedContact.lastName} moved to ${leadStages.find(s => s.id === targetStage)?.title}`,
-      });
+      try {
+        await contactsApi.updateLeadStage(draggedContact.id, targetStage);
+        
+        toast({
+          title: "Contact moved",
+          description: `${draggedContact.firstName} ${draggedContact.lastName} moved to ${leadStages.find(s => s.id === targetStage)?.title}`,
+        });
+        
+        onContactUpdated?.();
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to update contact stage",
+          variant: "destructive"
+        });
+      }
     }
     
     setDraggedContact(null);

@@ -268,7 +268,7 @@ const ContactsPage = () => {
         </TabsContent>
 
         <TabsContent value="pipeline">
-          <ContactPipeline contacts={contacts} />
+          <ContactPipeline contacts={contacts} onContactUpdated={loadContacts} />
         </TabsContent>
       </Tabs>
       

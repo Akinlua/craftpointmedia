@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Contact, ContactStatus, LeadStage } from "@/types/contact";
-import { useCRMStore } from "@/lib/stores/crmStore";
+import { contactsApi } from "@/lib/api/contacts";
 import { useToast } from "@/hooks/use-toast";
 import { X } from "lucide-react";
 
@@ -14,14 +14,14 @@ interface EditContactModalProps {
   contact: Contact | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onUpdated?: () => void;
 }
 
-export const EditContactModal = ({ contact, open, onOpenChange }: EditContactModalProps) => {
-  const { updateContact } = useCRMStore();
+export const EditContactModal = ({ contact, open, onOpenChange, onUpdated }: EditContactModalProps) => {
   const { toast } = useToast();
-  
   const [formData, setFormData] = useState<Partial<Contact>>({});
   const [newTag, setNewTag] = useState('');
+  const [saving, setSaving] = useState(false);
 
   // Initialize form data when contact changes
   useEffect(() => {
@@ -62,7 +62,7 @@ export const EditContactModal = ({ contact, open, onOpenChange }: EditContactMod
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!contact || !formData.firstName || !formData.lastName || !formData.email) {
@@ -75,10 +75,8 @@ export const EditContactModal = ({ contact, open, onOpenChange }: EditContactMod
     }
 
     try {
-      updateContact(contact.id, {
-        ...formData,
-        updatedAt: new Date().toISOString()
-      } as Partial<Contact>);
+      setSaving(true);
+      await contactsApi.updateContact(contact.id, formData);
 
       toast({
         title: "Contact Updated",
@@ -86,12 +84,15 @@ export const EditContactModal = ({ contact, open, onOpenChange }: EditContactMod
       });
 
       onOpenChange(false);
+      onUpdated?.();
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to update contact",
         variant: "destructive"
       });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -256,11 +257,11 @@ export const EditContactModal = ({ contact, open, onOpenChange }: EditContactMod
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit">
-              Update Contact
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Saving...' : 'Update Contact'}
             </Button>
           </div>
         </form>
