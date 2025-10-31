@@ -10,7 +10,9 @@ import { ContactPipeline } from "@/components/contacts/ContactPipeline";
 import { AddContactForm } from "@/components/contacts/AddContactForm";
 import { PageBackground } from "@/components/layout/PageBackground";
 import { Contact, ContactFilters as ContactFiltersType, ContactBulkAction } from "@/types/contact";
-import { useCRMStore } from "@/lib/stores/crmStore";
+import { contactsApi } from "@/lib/api/contacts";
+import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/lib/hooks/useSession";
 import { canCurrentUser } from "@/lib/rbac/can";
 import { generateContactsCSV, downloadCSV } from "@/lib/utils/export";
 import { Plus, Table as TableIcon, Kanban } from "lucide-react";
@@ -19,49 +21,60 @@ import { NoContactsState } from "@/components/ui/empty-states";
 
 const ContactsPage = () => {
   const navigate = useNavigate();
-  const { contacts, users, currentUser, updateContact, deleteContact } = useCRMStore();
+  const { profile, role } = useSession();
   const { toast } = useToast();
   
-  const [loading, setLoading] = useState(false);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<ContactFiltersType>({});
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalContacts, setTotalContacts] = useState(0);
   const [activeTab, setActiveTab] = useState("table");
   const [showAddForm, setShowAddForm] = useState(false);
 
-  // Filter contacts based on current filters
-  const filteredContacts = contacts.filter(contact => {
-    if (filters.status?.length && !filters.status.includes(contact.status)) return false;
-    if (filters.tags?.length && !filters.tags.some(tag => contact.tags.includes(tag))) return false;
-    if (filters.location && !contact.location?.toLowerCase().includes(filters.location.toLowerCase())) return false;
-    if (filters.search) {
-      const search = filters.search.toLowerCase();
-      if (!contact.firstName.toLowerCase().includes(search) &&
-          !contact.lastName.toLowerCase().includes(search) &&
-          !contact.email.toLowerCase().includes(search) &&
-          !contact.company?.toLowerCase().includes(search)) return false;
-    }
-    return true;
-  });
-
-  // Pagination
-  const itemsPerPage = 25;
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedContacts = filteredContacts.slice(startIndex, endIndex);
-  const calculatedTotalPages = Math.ceil(filteredContacts.length / itemsPerPage);
-
+  // Load contacts from API
   useEffect(() => {
-    setTotalPages(calculatedTotalPages);
-    if (currentPage > calculatedTotalPages && calculatedTotalPages > 0) {
-      setCurrentPage(1);
-    }
-  }, [filteredContacts.length, calculatedTotalPages, currentPage]);
+    loadContacts();
+    loadUsers();
+  }, [filters, currentPage]);
 
-  // Get available tags and owners from CRM store
+  const loadContacts = async () => {
+    setLoading(true);
+    try {
+      const result = await contactsApi.getContacts(filters, currentPage, 25);
+      setContacts(result.data);
+      setTotalPages(result.totalPages);
+      setTotalContacts(result.total);
+    } catch (error) {
+      console.error('Error loading contacts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load contacts",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name');
+      
+      if (data) setUsers(data);
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+  };
+
+  // Get available tags and owners
   const availableTags = Array.from(new Set(contacts.flatMap(c => c.tags)));
-  const availableOwners = users.map(u => ({ id: u.id, name: `${u.firstName} ${u.lastName}` }));
+  const availableOwners = users.map(u => ({ id: u.id, name: `${u.first_name} ${u.last_name}` }));
 
   // Selection handlers
   const handleSelectContact = (contactId: string, selected: boolean) => {
@@ -73,7 +86,7 @@ const ContactsPage = () => {
   };
 
   const handleSelectAll = (selected: boolean) => {
-    setSelectedContacts(selected ? paginatedContacts.map(c => c.id) : []);
+    setSelectedContacts(selected ? contacts.map(c => c.id) : []);
   };
 
   // Navigation handlers
@@ -87,7 +100,7 @@ const ContactsPage = () => {
   };
 
   const handleDeleteContact = async (contact: Contact) => {
-    if (!canCurrentUser('delete', 'contacts', currentUser?.role)) {
+    if (!canCurrentUser('delete', 'contacts', role?.role)) {
       toast({
         title: "Permission denied",
         description: "You don't have permission to delete contacts",
@@ -98,11 +111,12 @@ const ContactsPage = () => {
 
     if (confirm(`Are you sure you want to delete ${contact.firstName} ${contact.lastName}?`)) {
       try {
-        deleteContact(contact.id);
+        await contactsApi.bulkAction([contact.id], { type: 'delete' });
         toast({
           title: "Contact deleted",
           description: `${contact.firstName} ${contact.lastName} has been deleted`
         });
+        loadContacts();
       } catch (error) {
         toast({
           title: "Error",
@@ -131,36 +145,8 @@ const ContactsPage = () => {
         return;
       }
 
-      // Handle other bulk actions
-      selectedContacts.forEach(contactId => {
-        const contact = contacts.find(c => c.id === contactId);
-        if (contact) {
-          switch (action.type) {
-            case 'add_tag':
-              if (!contact.tags.includes(action.data.tag)) {
-                updateContact(contactId, { 
-                  tags: [...contact.tags, action.data.tag] 
-                });
-              }
-              break;
-            case 'remove_tag':
-              updateContact(contactId, { 
-                tags: contact.tags.filter(tag => tag !== action.data.tag) 
-              });
-              break;
-            case 'assign_owner':
-              const ownerInfo = users.find(u => u.id === action.data.ownerId);
-              updateContact(contactId, { 
-                ownerId: action.data.ownerId,
-                ownerName: ownerInfo ? `${ownerInfo.firstName} ${ownerInfo.lastName}` : 'Unknown'
-              });
-              break;
-            case 'delete':
-              deleteContact(contactId);
-              break;
-          }
-        }
-      });
+      // Handle other bulk actions via API
+      await contactsApi.bulkAction(selectedContacts, action);
       
       const actionNames = {
         add_tag: 'Tags added',
@@ -175,6 +161,7 @@ const ContactsPage = () => {
       });
 
       setSelectedContacts([]);
+      loadContacts();
     } catch (error) {
       toast({
         title: "Error",
@@ -184,7 +171,7 @@ const ContactsPage = () => {
     }
   };
 
-  const canCreateContact = canCurrentUser('create', 'contacts', currentUser?.role);
+  const canCreateContact = canCurrentUser('create', 'contacts', role?.role);
 
   return (
     <PageBackground variant="contacts">
@@ -234,16 +221,16 @@ const ContactsPage = () => {
         </TabsList>
 
         <TabsContent value="table" className="space-y-4">
-          {filteredContacts.length === 0 ? (
+          {totalContacts === 0 && !loading ? (
             <NoContactsState onAddContact={() => setShowAddForm(true)} />
           ) : (
             <Card className="card-elevated">
               <CardHeader>
-                <CardTitle>All Contacts ({filteredContacts.length})</CardTitle>
+                <CardTitle>All Contacts ({totalContacts})</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 <ContactTable
-                  contacts={paginatedContacts}
+                  contacts={contacts}
                   selectedContacts={selectedContacts}
                   onSelectContact={handleSelectContact}
                   onSelectAll={handleSelectAll}
@@ -281,7 +268,7 @@ const ContactsPage = () => {
         </TabsContent>
 
         <TabsContent value="pipeline">
-          <ContactPipeline contacts={filteredContacts} />
+          <ContactPipeline contacts={contacts} />
         </TabsContent>
       </Tabs>
       

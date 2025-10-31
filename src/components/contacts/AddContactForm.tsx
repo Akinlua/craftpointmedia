@@ -28,8 +28,9 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Contact, ContactStatus, LeadStage } from "@/types/contact";
-import { useCRMStore } from "@/lib/stores/crmStore";
+import { contactsApi } from "@/lib/api/contacts";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { X } from "lucide-react";
 
 const contactFormSchema = z.object({
@@ -52,10 +53,30 @@ interface AddContactFormProps {
 }
 
 export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
-  const { addContact, users, currentUser } = useCRMStore();
   const { toast } = useToast();
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+
+  // Load users and current user
+  useState(() => {
+    const loadData = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        setCurrentUserId(session.session.user.id);
+        
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .eq('org_id', (await supabase.from('profiles').select('org_id').eq('id', session.session.user.id).single()).data?.org_id);
+        
+        if (profiles) setUsers(profiles);
+      }
+    };
+    loadData();
+  });
 
   const form = useForm<ContactFormData>({
     resolver: zodResolver(contactFormSchema),
@@ -68,7 +89,7 @@ export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
       location: "",
       status: "lead",
       leadStage: "new",
-      ownerId: currentUser?.id || "",
+      ownerId: currentUserId || "",
     },
   });
 
@@ -88,9 +109,9 @@ export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
 
   const onSubmit = async (data: ContactFormData) => {
     try {
-      const ownerInfo = users.find(u => u.id === data.ownerId);
+      setLoading(true);
       
-      const newContact = addContact({
+      await contactsApi.createContact({
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
@@ -101,24 +122,30 @@ export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
         leadStage: data.leadStage,
         ownerId: data.ownerId,
         tags,
-        ownerName: ownerInfo ? `${ownerInfo.firstName} ${ownerInfo.lastName}` : 'Unknown',
-        leadScore: 50,
+        ownerName: '', // Will be populated by the API
+        leadScore: 50
       });
 
       toast({
         title: "Contact added",
-        description: `${newContact.firstName} ${newContact.lastName} has been added to your contacts.`,
+        description: `${data.firstName} ${data.lastName} has been added to your contacts.`,
       });
 
       onOpenChange(false);
       form.reset();
       setTags([]);
+      
+      // Trigger a page refresh to show the new contact
+      window.location.reload();
     } catch (error) {
+      console.error('Error adding contact:', error);
       toast({
         title: "Error",
         description: "Failed to add contact. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -286,7 +313,7 @@ export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
                     <SelectContent>
                       {users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
-                          {user.firstName} {user.lastName}
+                          {user.first_name} {user.last_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -328,8 +355,8 @@ export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
               <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" className="btn-primary">
-                Add Contact
+              <Button type="submit" className="btn-primary" disabled={loading}>
+                {loading ? 'Adding...' : 'Add Contact'}
               </Button>
             </div>
           </form>

@@ -1,213 +1,197 @@
 import { Contact, ContactFilters, ContactBulkAction, ContactTimeline } from '@/types/contact';
+import { supabase } from '@/integrations/supabase/client';
 
-// Mock data for contacts
-const mockContacts: Contact[] = [
-  {
-    id: '1',
-    firstName: 'John',
-    lastName: 'Smith',
-    email: 'john@acmecorp.com',
-    phone: '+1 (555) 123-4567',
-    company: 'Acme Corp',
-    location: 'New York, NY',
-    status: 'lead',
-    leadStage: 'contacted',
-    leadScore: 85,
-    tags: ['Hot Lead', 'Enterprise'],
-    ownerId: 'user1',
-    ownerName: 'Alice Johnson',
-    createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-01-17T14:30:00Z',
-    lastContactAt: '2024-01-17T14:30:00Z'
-  },
-  {
-    id: '2',
-    firstName: 'Sarah',
-    lastName: 'Johnson',
-    email: 'sarah@techstart.io',
-    phone: '+1 (555) 987-6543',
-    company: 'TechStart Inc',
-    location: 'San Francisco, CA',
-    status: 'customer',
-    leadScore: 92,
-    tags: ['Customer', 'Tech'],
-    ownerId: 'user2',
-    ownerName: 'Bob Wilson',
-    createdAt: '2024-01-10T09:00:00Z',
-    updatedAt: '2024-01-16T11:20:00Z',
-    lastContactAt: '2024-01-16T11:20:00Z'
-  },
-  {
-    id: '3',
-    firstName: 'Mike',
-    lastName: 'Davis',
-    email: 'mike@globaltech.com',
-    phone: '+1 (555) 456-7890',
-    company: 'Global Tech Solutions',
-    location: 'Austin, TX',
-    status: 'lead',
-    leadStage: 'proposal',
-    leadScore: 78,
-    tags: ['Prospect', 'VIP'],
-    ownerId: 'user1',
-    ownerName: 'Alice Johnson',
-    createdAt: '2024-01-12T15:30:00Z',
-    updatedAt: '2024-01-18T09:45:00Z',
-    lastContactAt: '2024-01-18T09:45:00Z'
-  },
-  {
-    id: '4',
-    firstName: 'Emily',
-    lastName: 'Wilson',
-    email: 'emily@innovate.co',
-    phone: '+1 (555) 234-5678',
-    company: 'Innovate Co',
-    location: 'Seattle, WA',
-    status: 'lead',
-    leadStage: 'new',
-    leadScore: 65,
-    tags: ['Lead'],
-    ownerId: 'user2',
-    ownerName: 'Bob Wilson',
-    createdAt: '2024-01-14T12:00:00Z',
-    updatedAt: '2024-01-14T12:00:00Z',
-    lastContactAt: '2024-01-14T12:00:00Z'
-  }
-];
+// Helper to transform DB contact to frontend Contact type
+const transformContact = (dbContact: any, ownerProfile?: any): Contact => ({
+  id: dbContact.id,
+  firstName: dbContact.first_name,
+  lastName: dbContact.last_name,
+  email: dbContact.email,
+  phone: dbContact.phone,
+  company: dbContact.company,
+  location: dbContact.location,
+  status: dbContact.status,
+  leadStage: dbContact.lead_stage,
+  leadScore: dbContact.lead_score,
+  tags: dbContact.tags || [],
+  ownerId: dbContact.owner_id,
+  ownerName: ownerProfile ? `${ownerProfile.first_name} ${ownerProfile.last_name}` : 'Unassigned',
+  avatar: dbContact.avatar_url,
+  customFields: dbContact.custom_fields,
+  createdAt: dbContact.created_at,
+  updatedAt: dbContact.updated_at,
+  lastContactAt: dbContact.last_contact_at
+});
 
-const mockTimeline: ContactTimeline[] = [
-  {
-    id: '1',
-    contactId: '1',
-    type: 'note',
-    title: 'Initial contact made',
-    description: 'Reached out via email regarding enterprise solution.',
-    createdBy: 'user1',
-    createdByName: 'Alice Johnson',
-    createdAt: '2024-01-15T10:00:00Z'
-  },
-  {
-    id: '2',
-    contactId: '1',
-    type: 'call',
-    title: 'Discovery call scheduled',
-    description: '30-minute call to discuss requirements.',
-    createdBy: 'user1',
-    createdByName: 'Alice Johnson',
-    createdAt: '2024-01-17T14:30:00Z'
-  }
-];
+// Helper to transform Contact to DB format
+const transformToDb = (contact: Partial<Contact>) => ({
+  first_name: contact.firstName,
+  last_name: contact.lastName,
+  email: contact.email,
+  phone: contact.phone,
+  company: contact.company,
+  location: contact.location,
+  status: contact.status,
+  lead_stage: contact.leadStage,
+  lead_score: contact.leadScore,
+  tags: contact.tags,
+  owner_id: contact.ownerId,
+  avatar_url: contact.avatar,
+  custom_fields: contact.customFields,
+  last_contact_at: contact.lastContactAt
+});
 
 export const contactsApi = {
   // Get contacts with filters and pagination
   getContacts: async (filters?: ContactFilters, page = 1, limit = 25) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    let query = supabase
+      .from('contacts')
+      .select('*, owner:profiles!owner_id(first_name, last_name)', { count: 'exact' });
     
-    let filteredContacts = [...mockContacts];
-    
+    // Apply filters
     if (filters?.status?.length) {
-      filteredContacts = filteredContacts.filter(c => filters.status!.includes(c.status));
+      query = query.in('status', filters.status);
     }
     
     if (filters?.tags?.length) {
-      filteredContacts = filteredContacts.filter(c => 
-        filters.tags!.some(tag => c.tags.includes(tag))
-      );
+      query = query.overlaps('tags', filters.tags);
     }
     
     if (filters?.location) {
-      filteredContacts = filteredContacts.filter(c => 
-        c.location?.toLowerCase().includes(filters.location!.toLowerCase())
-      );
+      query = query.ilike('location', `%${filters.location}%`);
     }
     
     if (filters?.search) {
-      const search = filters.search.toLowerCase();
-      filteredContacts = filteredContacts.filter(c => 
-        c.firstName.toLowerCase().includes(search) ||
-        c.lastName.toLowerCase().includes(search) ||
-        c.email.toLowerCase().includes(search) ||
-        c.company?.toLowerCase().includes(search)
-      );
+      const search = `%${filters.search}%`;
+      query = query.or(`first_name.ilike.${search},last_name.ilike.${search},email.ilike.${search},company.ilike.${search}`);
     }
     
+    // Apply pagination
     const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedContacts = filteredContacts.slice(startIndex, endIndex);
+    query = query.range(startIndex, startIndex + limit - 1).order('created_at', { ascending: false });
+    
+    const { data, error, count } = await query;
+    
+    if (error) throw error;
+    
+    const contacts = (data || []).map(contact => transformContact(contact, contact.owner));
     
     return {
-      data: paginatedContacts,
-      total: filteredContacts.length,
+      data: contacts,
+      total: count || 0,
       page,
-      totalPages: Math.ceil(filteredContacts.length / limit)
+      totalPages: Math.ceil((count || 0) / limit)
     };
   },
 
   // Get single contact by ID
   getContact: async (id: string): Promise<Contact | null> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockContacts.find(c => c.id === id) || null;
+    const { data, error } = await supabase
+      .from('contacts')
+      .select('*, owner:profiles!owner_id(first_name, last_name)')
+      .eq('id', id)
+      .maybeSingle();
+    
+    if (error) throw error;
+    if (!data) return null;
+    
+    return transformContact(data, data.owner);
   },
 
   // Update contact
   updateContact: async (id: string, updates: Partial<Contact>): Promise<Contact> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const contactIndex = mockContacts.findIndex(c => c.id === id);
-    if (contactIndex === -1) throw new Error('Contact not found');
+    const dbUpdates = transformToDb(updates);
     
-    mockContacts[contactIndex] = {
-      ...mockContacts[contactIndex],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
+    const { data, error } = await supabase
+      .from('contacts')
+      .update(dbUpdates)
+      .eq('id', id)
+      .select('*, owner:profiles!owner_id(first_name, last_name)')
+      .single();
     
-    return mockContacts[contactIndex];
+    if (error) throw error;
+    
+    return transformContact(data, data.owner);
   },
 
   // Get contact timeline
   getContactTimeline: async (contactId: string): Promise<ContactTimeline[]> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockTimeline.filter(t => t.contactId === contactId);
+    const { data, error } = await supabase
+      .from('contact_timeline')
+      .select('*, creator:profiles!created_by(first_name, last_name)')
+      .eq('contact_id', contactId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    return (data || []).map(item => ({
+      id: item.id,
+      contactId: item.contact_id,
+      type: item.type as any,
+      title: item.title,
+      description: item.description,
+      createdBy: item.created_by,
+      createdByName: item.creator ? `${item.creator.first_name} ${item.creator.last_name}` : 'Unknown',
+      createdAt: item.created_at,
+      metadata: (item.metadata || {}) as Record<string, any>
+    }));
   },
 
   // Bulk actions
   bulkAction: async (contactIds: string[], action: ContactBulkAction) => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
     switch (action.type) {
       case 'add_tag':
-        contactIds.forEach(id => {
-          const contact = mockContacts.find(c => c.id === id);
-          if (contact && !contact.tags.includes(action.data.tag)) {
-            contact.tags.push(action.data.tag);
+        for (const id of contactIds) {
+          const { data: contact } = await supabase
+            .from('contacts')
+            .select('tags')
+            .eq('id', id)
+            .single();
+          
+          if (contact) {
+            const tags = contact.tags || [];
+            if (!tags.includes(action.data.tag)) {
+              await supabase
+                .from('contacts')
+                .update({ tags: [...tags, action.data.tag] })
+                .eq('id', id);
+            }
           }
-        });
+        }
         break;
+        
       case 'remove_tag':
-        contactIds.forEach(id => {
-          const contact = mockContacts.find(c => c.id === id);
+        for (const id of contactIds) {
+          const { data: contact } = await supabase
+            .from('contacts')
+            .select('tags')
+            .eq('id', id)
+            .single();
+          
           if (contact) {
-            contact.tags = contact.tags.filter(tag => tag !== action.data.tag);
+            const tags = (contact.tags || []).filter(tag => tag !== action.data.tag);
+            await supabase
+              .from('contacts')
+              .update({ tags })
+              .eq('id', id);
           }
-        });
+        }
         break;
+        
       case 'assign_owner':
-        contactIds.forEach(id => {
-          const contact = mockContacts.find(c => c.id === id);
-          if (contact) {
-            contact.ownerId = action.data.ownerId;
-            contact.ownerName = action.data.ownerName;
-          }
-        });
+        await supabase
+          .from('contacts')
+          .update({ owner_id: action.data.ownerId })
+          .in('id', contactIds);
         break;
+        
       case 'delete':
-        contactIds.forEach(id => {
-          const index = mockContacts.findIndex(c => c.id === id);
-          if (index !== -1) {
-            mockContacts.splice(index, 1);
-          }
-        });
+        const { error } = await supabase
+          .from('contacts')
+          .delete()
+          .in('id', contactIds);
+        
+        if (error) throw error;
         break;
     }
     
@@ -216,12 +200,44 @@ export const contactsApi = {
 
   // Update lead stage
   updateLeadStage: async (id: string, stage: string) => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const contact = mockContacts.find(c => c.id === id);
-    if (contact) {
-      contact.leadStage = stage as any;
-      contact.updatedAt = new Date().toISOString();
-    }
-    return contact;
+    const { data, error } = await supabase
+      .from('contacts')
+      .update({ lead_stage: stage })
+      .eq('id', id)
+      .select('*, owner:profiles!owner_id(first_name, last_name)')
+      .single();
+    
+    if (error) throw error;
+    
+    return transformContact(data, data.owner);
+  },
+
+  // Create contact
+  createContact: async (contact: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session) throw new Error('Not authenticated');
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('org_id')
+      .eq('id', session.session.user.id)
+      .single();
+
+    if (!profile) throw new Error('Profile not found');
+
+    const dbContact = {
+      ...transformToDb(contact),
+      org_id: profile.org_id
+    };
+
+    const { data, error } = await supabase
+      .from('contacts')
+      .insert(dbContact)
+      .select('*, owner:profiles!owner_id(first_name, last_name)')
+      .single();
+
+    if (error) throw error;
+
+    return transformContact(data, data.owner);
   }
 };

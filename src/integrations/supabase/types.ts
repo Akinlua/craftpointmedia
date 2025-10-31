@@ -14,6 +14,132 @@ export type Database = {
   }
   public: {
     Tables: {
+      contact_timeline: {
+        Row: {
+          contact_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          title: string
+          type: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          title: string
+          type: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_timeline_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_timeline_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          avatar_url: string | null
+          company: string | null
+          created_at: string
+          custom_fields: Json | null
+          email: string
+          first_name: string
+          id: string
+          last_contact_at: string | null
+          last_name: string
+          lead_score: number | null
+          lead_stage: string | null
+          location: string | null
+          org_id: string
+          owner_id: string | null
+          phone: string | null
+          status: string
+          tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          company?: string | null
+          created_at?: string
+          custom_fields?: Json | null
+          email: string
+          first_name: string
+          id?: string
+          last_contact_at?: string | null
+          last_name: string
+          lead_score?: number | null
+          lead_stage?: string | null
+          location?: string | null
+          org_id: string
+          owner_id?: string | null
+          phone?: string | null
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          company?: string | null
+          created_at?: string
+          custom_fields?: Json | null
+          email?: string
+          first_name?: string
+          id?: string
+          last_contact_at?: string | null
+          last_name?: string
+          lead_score?: number | null
+          lead_stage?: string | null
+          location?: string | null
+          org_id?: string
+          owner_id?: string | null
+          phone?: string | null
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           accepted_at: string | null
