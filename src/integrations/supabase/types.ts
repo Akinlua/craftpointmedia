@@ -140,6 +140,153 @@ export type Database = {
           },
         ]
       }
+      deal_activities: {
+        Row: {
+          created_at: string
+          created_by: string
+          deal_id: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          deal_id: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          title: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          deal_id?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_activities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_activities_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deal_contacts: {
+        Row: {
+          contact_id: string
+          created_at: string
+          deal_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          deal_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          deal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_contacts_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_contacts_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deals: {
+        Row: {
+          close_date: string | null
+          created_at: string
+          currency: string
+          custom_fields: Json | null
+          description: string | null
+          id: string
+          last_activity_at: string | null
+          org_id: string
+          owner_id: string | null
+          probability: number | null
+          stage: string
+          title: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          close_date?: string | null
+          created_at?: string
+          currency?: string
+          custom_fields?: Json | null
+          description?: string | null
+          id?: string
+          last_activity_at?: string | null
+          org_id: string
+          owner_id?: string | null
+          probability?: number | null
+          stage?: string
+          title: string
+          updated_at?: string
+          value?: number
+        }
+        Update: {
+          close_date?: string | null
+          created_at?: string
+          currency?: string
+          custom_fields?: Json | null
+          description?: string | null
+          id?: string
+          last_activity_at?: string | null
+          org_id?: string
+          owner_id?: string | null
+          probability?: number | null
+          stage?: string
+          title?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           accepted_at: string | null

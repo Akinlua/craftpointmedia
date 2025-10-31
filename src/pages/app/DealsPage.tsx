@@ -1,17 +1,39 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useCRMStore } from "@/lib/stores/crmStore";
-import { DealStage } from "@/types/deal";
+import { Deal } from "@/types/deal";
+import { dealsApi } from "@/lib/api/deals";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, DollarSign, Calendar, User } from "lucide-react";
 
 const DealsPage = () => {
-  const { deals, updateDealStage } = useCRMStore();
   const { toast } = useToast();
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [loading, setLoading] = useState(true);
   const [draggedDeal, setDraggedDeal] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadDeals();
+  }, []);
+
+  const loadDeals = async () => {
+    setLoading(true);
+    try {
+      const result = await dealsApi.getDeals();
+      setDeals(result.data);
+    } catch (error) {
+      console.error('Error loading deals:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load deals",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const stages = [
     { id: "new", title: "New", color: "bg-slate-100 dark:bg-slate-800" },
@@ -47,18 +69,28 @@ const DealsPage = () => {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (e: React.DragEvent, targetStage: string) => {
+  const handleDrop = async (e: React.DragEvent, targetStage: string) => {
     e.preventDefault();
     
     if (draggedDeal) {
       const deal = deals.find(d => d.id === draggedDeal);
       if (deal && deal.stage !== targetStage) {
-        updateDealStage(draggedDeal, targetStage as DealStage);
-        
-        toast({
-          title: "Deal moved",
-          description: `${deal.title} moved to ${stages.find(s => s.id === targetStage)?.title}`,
-        });
+        try {
+          await dealsApi.updateDealStage(draggedDeal, targetStage);
+          
+          toast({
+            title: "Deal moved",
+            description: `${deal.title} moved to ${stages.find(s => s.id === targetStage)?.title}`,
+          });
+          
+          loadDeals();
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to update deal stage",
+            variant: "destructive"
+          });
+        }
       }
     }
     

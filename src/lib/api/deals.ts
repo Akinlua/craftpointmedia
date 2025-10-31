@@ -1,6 +1,7 @@
 import { Deal, DealStageConfig, DealFilters, DealBulkAction, DealActivity, DealNote } from '@/types/deal';
+import { supabase } from '@/integrations/supabase/client';
 
-// Mock deal stages configuration
+// Deal stages configuration
 export const dealStages: DealStageConfig[] = [
   { id: 'new', name: 'New', type: 'new', color: 'bg-blue-500', order: 1 },
   { id: 'contacted', name: 'Contacted', type: 'contacted', color: 'bg-yellow-500', order: 2 },
@@ -9,162 +10,98 @@ export const dealStages: DealStageConfig[] = [
   { id: 'closed_lost', name: 'Closed Lost', type: 'closed_lost', color: 'bg-red-500', order: 5 }
 ];
 
-// Mock data for deals
-const mockDeals: Deal[] = [
-  {
-    id: '1',
-    title: 'Enterprise Software License',
-    value: 50000,
-    currency: 'USD',
-    stage: 'proposal',
-    stageId: 'proposal',
-    probability: 75,
-    ownerId: 'user1',
-    ownerName: 'Alice Johnson',
-    contactIds: ['1', '2'],
-    contacts: [
-      { id: '1', name: 'John Smith' },
-      { id: '2', name: 'Sarah Johnson' }
-    ],
-    closeDate: '2024-02-15',
-    createdAt: '2024-01-10T09:00:00Z',
-    updatedAt: '2024-01-18T14:30:00Z',
-    lastActivityAt: '2024-01-18T14:30:00Z',
-    description: 'Large enterprise software licensing deal for Acme Corp'
-  },
-  {
-    id: '2',
-    title: 'Website Redesign Project',
-    value: 15000,
-    currency: 'USD',
-    stage: 'contacted',
-    stageId: 'contacted',
-    probability: 40,
-    ownerId: 'user2',
-    ownerName: 'Bob Wilson',
-    contactIds: ['3'],
-    contacts: [
-      { id: '3', name: 'Mike Davis' }
-    ],
-    closeDate: '2024-02-28',
-    createdAt: '2024-01-12T10:00:00Z',
-    updatedAt: '2024-01-17T11:00:00Z',
-    lastActivityAt: '2024-01-17T11:00:00Z',
-    description: 'Complete website redesign and development'
-  },
-  {
-    id: '3',
-    title: 'Monthly SaaS Subscription',
-    value: 2400,
-    currency: 'USD',
-    stage: 'closed_won',
-    stageId: 'closed_won',
-    probability: 100,
-    ownerId: 'user1',
-    ownerName: 'Alice Johnson',
-    contactIds: ['4'],
-    contacts: [
-      { id: '4', name: 'Emily Wilson' }
-    ],
-    closeDate: '2024-01-20',
-    createdAt: '2024-01-05T08:00:00Z',
-    updatedAt: '2024-01-20T16:00:00Z',
-    lastActivityAt: '2024-01-20T16:00:00Z',
-    description: 'Annual SaaS subscription for Innovate Co'
-  },
-  {
-    id: '4',
-    title: 'Consulting Services',
-    value: 8500,
-    currency: 'USD',
-    stage: 'new',
-    stageId: 'new',
-    probability: 25,
-    ownerId: 'user2',
-    ownerName: 'Bob Wilson',
-    contactIds: ['1'],
-    contacts: [
-      { id: '1', name: 'John Smith' }
-    ],
-    closeDate: '2024-03-10',
-    createdAt: '2024-01-15T12:00:00Z',
-    updatedAt: '2024-01-15T12:00:00Z',
-    lastActivityAt: '2024-01-15T12:00:00Z',
-    description: 'Strategic consulting engagement'
-  }
-];
+// Helper to transform DB deal to frontend Deal type
+const transformDeal = (dbDeal: any, ownerProfile?: any, contacts?: any[]): Deal => ({
+  id: dbDeal.id,
+  title: dbDeal.title,
+  value: parseFloat(dbDeal.value) || 0,
+  currency: dbDeal.currency,
+  stage: dbDeal.stage,
+  stageId: dbDeal.stage,
+  probability: dbDeal.probability,
+  ownerId: dbDeal.owner_id,
+  ownerName: ownerProfile ? `${ownerProfile.first_name} ${ownerProfile.last_name}` : 'Unassigned',
+  ownerAvatar: ownerProfile?.avatar_url,
+  contactIds: contacts?.map(c => c.id) || [],
+  contacts: contacts?.map(c => ({
+    id: c.id,
+    name: `${c.first_name} ${c.last_name}`,
+    avatar: c.avatar_url
+  })) || [],
+  closeDate: dbDeal.close_date,
+  createdAt: dbDeal.created_at,
+  updatedAt: dbDeal.updated_at,
+  lastActivityAt: dbDeal.last_activity_at,
+  description: dbDeal.description,
+  customFields: dbDeal.custom_fields
+});
 
-const mockActivities: DealActivity[] = [
-  {
-    id: '1',
-    dealId: '1',
-    type: 'stage_change',
-    title: 'Stage changed to Proposal',
-    description: 'Moved from Contacted to Proposal stage',
-    createdBy: 'user1',
-    createdByName: 'Alice Johnson',
-    createdAt: '2024-01-18T14:30:00Z'
-  },
-  {
-    id: '2',
-    dealId: '1',
-    type: 'note',
-    title: 'Meeting notes added',
-    description: 'Had productive call with decision makers. They are interested in our enterprise package.',
-    createdBy: 'user1',
-    createdByName: 'Alice Johnson',
-    createdAt: '2024-01-17T10:00:00Z'
-  }
-];
-
-const mockNotes: DealNote[] = [
-  {
-    id: '1',
-    dealId: '1',
-    content: 'Client is very interested in our enterprise solution. Need to prepare custom proposal by end of week.',
-    createdBy: 'user1',
-    createdByName: 'Alice Johnson',
-    createdAt: '2024-01-18T09:00:00Z',
-    updatedAt: '2024-01-18T09:00:00Z'
-  }
-];
+// Helper to transform Deal to DB format
+const transformToDb = (deal: Partial<Deal>) => ({
+  title: deal.title,
+  value: deal.value,
+  currency: deal.currency,
+  stage: deal.stage,
+  probability: deal.probability,
+  owner_id: deal.ownerId,
+  close_date: deal.closeDate,
+  description: deal.description,
+  custom_fields: deal.customFields,
+  last_activity_at: deal.lastActivityAt
+});
 
 export const dealsApi = {
   // Get deals with filters
-  getDeals: async (filters?: DealFilters): Promise<Deal[]> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    let filteredDeals = [...mockDeals];
-    
+  getDeals: async (filters?: DealFilters, page = 1, limit = 100): Promise<{ data: Deal[], total: number }> => {
+    let query = supabase
+      .from('deals')
+      .select(`
+        *,
+        owner:profiles!owner_id(first_name, last_name, avatar_url),
+        deal_contacts(
+          contact:contacts(id, first_name, last_name, avatar_url)
+        )
+      `, { count: 'exact' });
+
+    // Apply filters
     if (filters?.stage?.length) {
-      filteredDeals = filteredDeals.filter(d => filters.stage!.includes(d.stage));
+      query = query.in('stage', filters.stage);
     }
-    
+
     if (filters?.owner?.length) {
-      filteredDeals = filteredDeals.filter(d => filters.owner!.includes(d.ownerId));
+      query = query.in('owner_id', filters.owner);
     }
-    
+
     if (filters?.valueRange) {
-      filteredDeals = filteredDeals.filter(d => 
-        d.value >= filters.valueRange!.min && d.value <= filters.valueRange!.max
-      );
+      query = query.gte('value', filters.valueRange.min).lte('value', filters.valueRange.max);
     }
-    
+
     if (filters?.search) {
-      const search = filters.search.toLowerCase();
-      filteredDeals = filteredDeals.filter(d => 
-        d.title.toLowerCase().includes(search) ||
-        d.description?.toLowerCase().includes(search) ||
-        d.contacts.some(c => c.name.toLowerCase().includes(search))
-      );
+      query = query.ilike('title', `%${filters.search}%`);
     }
-    
-    return filteredDeals;
+
+    // Apply pagination
+    const startIndex = (page - 1) * limit;
+    query = query.range(startIndex, startIndex + limit - 1).order('created_at', { ascending: false });
+
+    const { data, error, count } = await query;
+
+    if (error) throw error;
+
+    const deals = (data || []).map(deal => {
+      const contacts = deal.deal_contacts?.map((dc: any) => dc.contact).filter(Boolean) || [];
+      return transformDeal(deal, deal.owner, contacts);
+    });
+
+    return {
+      data: deals,
+      total: count || 0
+    };
   },
 
   // Get deals grouped by stage for board view
   getDealsByStage: async (filters?: DealFilters): Promise<Record<string, Deal[]>> => {
-    const deals = await dealsApi.getDeals(filters);
+    const { data: deals } = await dealsApi.getDeals(filters, 1, 1000);
     
     const dealsByStage: Record<string, Deal[]> = {};
     dealStages.forEach(stage => {
@@ -176,100 +113,220 @@ export const dealsApi = {
 
   // Get single deal by ID
   getDeal: async (id: string): Promise<Deal | null> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockDeals.find(d => d.id === id) || null;
+    const { data, error } = await supabase
+      .from('deals')
+      .select(`
+        *,
+        owner:profiles!owner_id(first_name, last_name, avatar_url),
+        deal_contacts(
+          contact:contacts(id, first_name, last_name, avatar_url)
+        )
+      `)
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return null;
+
+    const contacts = data.deal_contacts?.map((dc: any) => dc.contact).filter(Boolean) || [];
+    return transformDeal(data, data.owner, contacts);
+  },
+
+  // Create deal
+  createDeal: async (deal: Omit<Deal, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session) throw new Error('Not authenticated');
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('org_id')
+      .eq('id', session.session.user.id)
+      .single();
+
+    if (!profile) throw new Error('Profile not found');
+
+    const dbDeal = {
+      ...transformToDb(deal),
+      org_id: profile.org_id
+    };
+
+    const { data, error } = await supabase
+      .from('deals')
+      .insert(dbDeal)
+      .select(`
+        *,
+        owner:profiles!owner_id(first_name, last_name, avatar_url)
+      `)
+      .single();
+
+    if (error) throw error;
+
+    // Add deal contacts if provided
+    if (deal.contactIds?.length) {
+      const dealContacts = deal.contactIds.map(contactId => ({
+        deal_id: data.id,
+        contact_id: contactId
+      }));
+
+      await supabase.from('deal_contacts').insert(dealContacts);
+    }
+
+    return transformDeal(data, data.owner, []);
   },
 
   // Update deal
   updateDeal: async (id: string, updates: Partial<Deal>): Promise<Deal> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const dealIndex = mockDeals.findIndex(d => d.id === id);
-    if (dealIndex === -1) throw new Error('Deal not found');
-    
-    mockDeals[dealIndex] = {
-      ...mockDeals[dealIndex],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
-    
-    return mockDeals[dealIndex];
+    const dbUpdates = transformToDb(updates);
+
+    const { data, error } = await supabase
+      .from('deals')
+      .update(dbUpdates)
+      .eq('id', id)
+      .select(`
+        *,
+        owner:profiles!owner_id(first_name, last_name, avatar_url),
+        deal_contacts(
+          contact:contacts(id, first_name, last_name, avatar_url)
+        )
+      `)
+      .single();
+
+    if (error) throw error;
+
+    const contacts = data.deal_contacts?.map((dc: any) => dc.contact).filter(Boolean) || [];
+    return transformDeal(data, data.owner, contacts);
   },
 
   // Update deal stage (for drag-and-drop)
   updateDealStage: async (id: string, stageId: string): Promise<Deal> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const deal = mockDeals.find(d => d.id === id);
-    if (!deal) throw new Error('Deal not found');
-    
     const stage = dealStages.find(s => s.id === stageId);
     if (!stage) throw new Error('Stage not found');
-    
-    deal.stageId = stageId;
-    deal.stage = stage.type;
-    deal.updatedAt = new Date().toISOString();
-    deal.lastActivityAt = new Date().toISOString();
-    
-    return deal;
+
+    const { data, error } = await supabase
+      .from('deals')
+      .update({ 
+        stage: stageId,
+        last_activity_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select(`
+        *,
+        owner:profiles!owner_id(first_name, last_name, avatar_url),
+        deal_contacts(
+          contact:contacts(id, first_name, last_name, avatar_url)
+        )
+      `)
+      .single();
+
+    if (error) throw error;
+
+    const contacts = data.deal_contacts?.map((dc: any) => dc.contact).filter(Boolean) || [];
+    return transformDeal(data, data.owner, contacts);
   },
 
   // Get deal activities
   getDealActivities: async (dealId: string): Promise<DealActivity[]> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockActivities.filter(a => a.dealId === dealId);
+    const { data, error } = await supabase
+      .from('deal_activities')
+      .select('*, creator:profiles!created_by(first_name, last_name)')
+      .eq('deal_id', dealId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(item => ({
+      id: item.id,
+      dealId: item.deal_id,
+      type: item.type as any,
+      title: item.title,
+      description: item.description,
+      createdBy: item.created_by,
+      createdByName: item.creator ? `${item.creator.first_name} ${item.creator.last_name}` : 'Unknown',
+      createdAt: item.created_at,
+      metadata: (item.metadata || {}) as Record<string, any>
+    }));
   },
 
-  // Get deal notes
+  // Get deal notes (notes are a subset of activities)
   getDealNotes: async (dealId: string): Promise<DealNote[]> => {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return mockNotes.filter(n => n.dealId === dealId);
+    const { data, error } = await supabase
+      .from('deal_activities')
+      .select('*, creator:profiles!created_by(first_name, last_name)')
+      .eq('deal_id', dealId)
+      .eq('type', 'note')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(item => ({
+      id: item.id,
+      dealId: item.deal_id,
+      content: item.description || '',
+      createdBy: item.created_by,
+      createdByName: item.creator ? `${item.creator.first_name} ${item.creator.last_name}` : 'Unknown',
+      createdAt: item.created_at,
+      updatedAt: item.created_at
+    }));
   },
 
   // Create deal note
   createDealNote: async (dealId: string, content: string): Promise<DealNote> => {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    const note: DealNote = {
-      id: Date.now().toString(),
-      dealId,
-      content,
-      createdBy: 'user1',
-      createdByName: 'Current User',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('deal_activities')
+      .insert({
+        deal_id: dealId,
+        type: 'note',
+        title: 'Note added',
+        description: content,
+        created_by: session.session.user.id
+      })
+      .select('*, creator:profiles!created_by(first_name, last_name)')
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      dealId: data.deal_id,
+      content: data.description || '',
+      createdBy: data.created_by,
+      createdByName: data.creator ? `${data.creator.first_name} ${data.creator.last_name}` : 'Unknown',
+      createdAt: data.created_at,
+      updatedAt: data.created_at
     };
-    mockNotes.push(note);
-    return note;
   },
 
   // Bulk actions
   bulkAction: async (dealIds: string[], action: DealBulkAction) => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
     switch (action.type) {
       case 'assign_owner':
-        dealIds.forEach(id => {
-          const deal = mockDeals.find(d => d.id === id);
-          if (deal) {
-            deal.ownerId = action.data.ownerId;
-            deal.ownerName = action.data.ownerName;
-          }
-        });
+        const { error: assignError } = await supabase
+          .from('deals')
+          .update({ owner_id: action.data.ownerId })
+          .in('id', dealIds);
+        
+        if (assignError) throw assignError;
         break;
+        
       case 'change_stage':
-        dealIds.forEach(id => {
-          const deal = mockDeals.find(d => d.id === id);
-          if (deal) {
-            deal.stageId = action.data.stageId;
-            deal.stage = action.data.stage;
-          }
-        });
+        const { error: stageError } = await supabase
+          .from('deals')
+          .update({ stage: action.data.stageId })
+          .in('id', dealIds);
+        
+        if (stageError) throw stageError;
         break;
+        
       case 'delete':
-        dealIds.forEach(id => {
-          const index = mockDeals.findIndex(d => d.id === id);
-          if (index !== -1) {
-            mockDeals.splice(index, 1);
-          }
-        });
+        const { error: deleteError } = await supabase
+          .from('deals')
+          .delete()
+          .in('id', dealIds);
+        
+        if (deleteError) throw deleteError;
         break;
     }
     
