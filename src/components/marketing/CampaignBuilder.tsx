@@ -29,8 +29,8 @@ export function CampaignBuilder() {
     content: { body: '' },
     audience: { size: 0 },
     schedule: { timezone: 'America/New_York' },
-    ownerId: user?.id || '',
-    orgId: user?.orgId || ''
+              ownerId: profile?.id || '',
+              orgId: profile?.org_id || ''
   });
 
   const { data: templates } = useQuery({

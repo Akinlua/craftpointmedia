@@ -43,8 +43,8 @@ export function TemplateEditor({ templateId }: TemplateEditorProps) {
     content: { body: '' },
     tags: [],
     variables: [],
-    ownerId: user?.id || '',
-    orgId: user?.orgId || ''
+              ownerId: profile?.id || '',
+              orgId: profile?.org_id || ''
   });
 
   const [editorMode, setEditorMode] = useState<'visual' | 'code'>('visual');

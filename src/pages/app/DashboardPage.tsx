@@ -51,7 +51,7 @@ const DashboardPage = () => {
           Dashboard
         </h1>
         <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-          {currentOrg?.name ? `Welcome to ${currentOrg.name}!` : 'Welcome back!'} Here's what's happening with your business today.
+          {organization?.name ? `Welcome to ${organization.name}!` : 'Welcome back!'} Here's what's happening with your business today.
         </p>
       </div>
 

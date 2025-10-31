@@ -52,7 +52,7 @@ export const DealList = ({
   onDeleteDeal,
   loading
 }: DealListProps) => {
-  const { user } = useSession();
+  const { user, role } = useSession();
   const allSelected = deals.length > 0 && selectedDeals.length === deals.length;
   const someSelected = selectedDeals.length > 0 && selectedDeals.length < deals.length;
 
@@ -83,15 +83,15 @@ export const DealList = ({
   };
 
   const canDelete = (deal: Deal) => {
-    if (!user) return false;
+    if (!role) return false;
     
     // Owner and Manager can delete any deal
-    if (canCurrentUser('delete', 'deals', user.role)) {
+    if (canCurrentUser('delete', 'deals', role.role)) {
       return true;
     }
     
     // Staff can only delete their own deals
-    return user.id === deal.ownerId;
+    return user?.id === deal.ownerId;
   };
 
   const getInitials = (name: string) => {

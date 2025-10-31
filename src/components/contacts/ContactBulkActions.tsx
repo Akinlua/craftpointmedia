@@ -46,7 +46,7 @@ export const ContactBulkActions = ({
   availableTags,
   availableOwners
 }: ContactBulkActionsProps) => {
-  const { user } = useSession();
+  const { role } = useSession();
   const [addTagDialog, setAddTagDialog] = useState(false);
   const [removeTagDialog, setRemoveTagDialog] = useState(false);
   const [assignOwnerDialog, setAssignOwnerDialog] = useState(false);
@@ -54,7 +54,7 @@ export const ContactBulkActions = ({
   const [selectedTag, setSelectedTag] = useState("");
   const [selectedOwner, setSelectedOwner] = useState("");
 
-  const canDelete = canCurrentUser('delete', 'contacts', user?.role);
+  const canDelete = role ? canCurrentUser('delete', 'contacts', role.role) : false;
 
   const handleAddTag = () => {
     if (newTag.trim()) {

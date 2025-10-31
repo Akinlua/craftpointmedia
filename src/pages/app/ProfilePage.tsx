@@ -14,16 +14,15 @@ import { useToast } from "@/hooks/use-toast";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
-  const { user, currentOrg } = useSession();
-  const { setCurrentUser } = useCRMStore();
+  const { profile, organization, updateProfile } = useSession();
   const { toast } = useToast();
   
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    email: user?.email || '',
-    phone: '', // Mock field
+    first_name: profile?.first_name || '',
+    last_name: profile?.last_name || '',
+    email: profile?.email || '',
+    phone: profile?.phone || '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
@@ -33,8 +32,8 @@ const ProfilePage = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
-    if (!user) return;
+  const handleSave = async () => {
+    if (!profile) return;
 
     // Validate password change if attempted
     if (formData.newPassword) {
@@ -56,17 +55,12 @@ const ProfilePage = () => {
       }
     }
 
-    // Mock save to store
-    const updatedUser = {
-      ...user,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      updatedAt: new Date().toISOString()
-    };
-
-    // Update store (mock)
-    setCurrentUser(updatedUser);
+    // Update profile
+    await updateProfile({
+      first_name: formData.first_name,
+      last_name: formData.last_name,
+      phone: formData.phone,
+    });
 
     setIsEditing(false);
     toast({
@@ -85,10 +79,10 @@ const ProfilePage = () => {
 
   const handleCancel = () => {
     setFormData({
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
-      email: user?.email || '',
-      phone: '',
+      first_name: profile?.first_name || '',
+      last_name: profile?.last_name || '',
+      email: profile?.email || '',
+      phone: profile?.phone || '',
       currentPassword: '',
       newPassword: '',
       confirmPassword: ''
@@ -113,10 +107,10 @@ const ProfilePage = () => {
     }
   };
 
-  if (!user) {
+  if (!profile) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">User not found</p>
+        <p className="text-muted-foreground">Profile not found</p>
       </div>
     );
   }
@@ -168,17 +162,17 @@ const ProfilePage = () => {
               <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
                   <AvatarFallback className="bg-primary/10 text-primary border text-2xl">
-                    {getInitials(user.firstName, user.lastName)}
+                    {getInitials(profile.first_name || '', profile.last_name || '')}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="text-lg font-semibold">{user.firstName} {user.lastName}</h3>
-                  <p className="text-muted-foreground">{user.email}</p>
+                  <h3 className="text-lg font-semibold">{profile.first_name} {profile.last_name}</h3>
+                  <p className="text-muted-foreground">{profile.email}</p>
                   <Badge 
                     variant="outline" 
-                    className={`mt-1 ${getRoleBadgeColor(user.role)}`}
+                    className="mt-1 bg-primary/10 text-primary border-primary/20"
                   >
-                    {user.role}
+                    {profile.status}
                   </Badge>
                 </div>
               </div>
@@ -188,20 +182,20 @@ const ProfilePage = () => {
               {/* Form Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="first_name">First Name</Label>
                   <Input
-                    id="firstName"
-                    value={formData.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    id="first_name"
+                    value={formData.first_name}
+                    onChange={(e) => handleInputChange('first_name', e.target.value)}
                     disabled={!isEditing}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="last_name">Last Name</Label>
                   <Input
-                    id="lastName"
-                    value={formData.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    id="last_name"
+                    value={formData.last_name}
+                    onChange={(e) => handleInputChange('last_name', e.target.value)}
                     disabled={!isEditing}
                   />
                 </div>
@@ -211,8 +205,7 @@ const ProfilePage = () => {
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    disabled={!isEditing}
+                    disabled={true}
                   />
                 </div>
                 <div className="space-y-2">
@@ -280,22 +273,12 @@ const ProfilePage = () => {
             <CardContent className="space-y-4">
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Organization</Label>
-                <p className="mt-1 font-medium">{currentOrg?.name}</p>
+                <p className="mt-1 font-medium">{organization?.name}</p>
               </div>
               
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Domain</Label>
-                <p className="mt-1 text-muted-foreground">{currentOrg?.domain || 'Not set'}</p>
-              </div>
-              
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Your Role</Label>
-                <Badge 
-                  variant="outline" 
-                  className={`mt-1 ${getRoleBadgeColor(user.role)}`}
-                >
-                  {user.role}
-                </Badge>
+                <p className="mt-1 text-muted-foreground">{organization?.domain || 'Not set'}</p>
               </div>
 
               <Separator />
@@ -303,24 +286,8 @@ const ProfilePage = () => {
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Account Status</Label>
                 <div className="mt-1 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm">Active</span>
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Email Verified</Label>
-                <div className="mt-1 flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${user.emailVerified ? 'bg-green-500' : 'bg-orange-500'}`}></div>
-                  <span className="text-sm">{user.emailVerified ? 'Verified' : 'Pending'}</span>
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">2FA Status</Label>
-                <div className="mt-1 flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${user.twoFactorEnabled ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                  <span className="text-sm">{user.twoFactorEnabled ? 'Enabled' : 'Disabled'}</span>
+                  <div className={`w-2 h-2 rounded-full ${profile.status === 'active' ? 'bg-green-500' : 'bg-orange-500'}`}></div>
+                  <span className="text-sm capitalize">{profile.status}</span>
                 </div>
               </div>
             </CardContent>

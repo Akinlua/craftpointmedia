@@ -56,7 +56,7 @@ const TeamPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user: currentUser, currentOrg } = useSession();
+  const { profile, organization } = useSession();
   const { users } = useCRMStore();
 
   // Use mock data from CRM store instead of API

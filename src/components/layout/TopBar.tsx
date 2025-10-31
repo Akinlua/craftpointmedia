@@ -28,7 +28,7 @@ const TopBar = () => {
       <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         <SidebarTrigger className="lg:hidden" />
         <h2 className="text-base sm:text-lg font-bold tracking-tight bg-gradient-to-r from-primary via-primary/90 to-primary/80 bg-clip-text text-transparent animate-bounce-gentle truncate">
-          {currentOrg?.name || 'Your Company'}
+          {organization?.name || 'Your Company'}
         </h2>
       </div>
 
@@ -60,7 +60,7 @@ const TopBar = () => {
             <Button variant="ghost" className="relative h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:scale-110 transition-all duration-300 ease-out hover:shadow-lg">
               <Avatar className="h-7 w-7 sm:h-8 sm:w-8 ring-2 ring-primary/30 ring-offset-1 sm:ring-offset-2 ring-offset-background hover:ring-primary/50 transition-all duration-300">
                 <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-semibold shadow-inner text-xs sm:text-sm">
-                  {user ? `${user.firstName[0]}${user.lastName[0]}` : 'U'}
+                  {profile ? `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}` : 'U'}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -68,11 +68,11 @@ const TopBar = () => {
           <DropdownMenuContent className="w-48 sm:w-56 glass-panel animate-scale-in" align="end" forceMount>
             <div className="flex items-center justify-start gap-2 p-2">
               <div className="flex flex-col space-y-1 leading-none">
-                {user && (
+                {profile && (
                   <>
-                    <p className="font-medium text-sm">{user.firstName} {user.lastName}</p>
+                    <p className="font-medium text-sm">{profile.first_name} {profile.last_name}</p>
                     <p className="w-[160px] sm:w-[200px] truncate text-xs sm:text-sm text-muted-foreground">
-                      {user.email}
+                      {profile.email}
                     </p>
                   </>
                 )}

@@ -53,7 +53,7 @@ export const ContactTable = ({
   onDeleteContact,
   loading
 }: ContactTableProps) => {
-  const { user } = useSession();
+  const { user, role } = useSession();
   const allSelected = contacts.length > 0 && selectedContacts.length === contacts.length;
   const someSelected = selectedContacts.length > 0 && selectedContacts.length < contacts.length;
 
@@ -86,15 +86,15 @@ export const ContactTable = ({
   };
 
   const canDelete = (contact: Contact) => {
-    if (!user) return false;
+    if (!role) return false;
     
     // Owner and Manager can delete any contact
-    if (canCurrentUser('delete', 'contacts', user.role)) {
+    if (canCurrentUser('delete', 'contacts', role.role)) {
       return true;
     }
     
     // Staff can only delete their own contacts
-    return user.id === contact.ownerId;
+    return user?.id === contact.ownerId;
   };
 
   const getInitials = (firstName: string, lastName: string) => {

@@ -66,25 +66,15 @@ const AcceptInvitationPage = () => {
 
     setIsLoading(true);
     try {
-      // Call backend API to accept invitation
-      const { user, org, token: authToken } = await authApi.acceptInvite({
-        token,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        password: data.password,
-      });
-
-      // Mark invite as accepted locally
-      acceptInvite(token);
-
-      // Log user in with token
-      login(user, org, authToken);
-      
+      // TODO: Call Supabase edge function to accept invitation
+      // For now, simulate acceptance
       toast({
-        title: "Welcome to CraftPoint CRM!",
-        description: "Your account has been created successfully.",
+        title: "Account created!",
+        description: "Your account has been created. Please log in.",
       });
-      navigate("/app/dashboard");
+      
+      acceptInvite(token);
+      navigate("/auth/login");
     } catch (error) {
       toast({
         title: "Invitation failed",

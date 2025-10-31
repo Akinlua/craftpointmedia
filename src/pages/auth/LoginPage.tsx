@@ -38,13 +38,20 @@ const LoginPage = () => {
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
     try {
-      const { user, org, token } = await authApi.login(data as { email: string; password: string });
-      login(user, org, token);
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully signed in.",
-      });
-      navigate("/app/dashboard");
+      const result = await login(data.email, data.password);
+      if (result.error) {
+        toast({
+          title: "Sign in failed", 
+          description: result.error,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully signed in.",
+        });
+        navigate("/app/dashboard");
+      }
     } catch (error) {
       toast({
         title: "Sign in failed", 
@@ -57,20 +64,11 @@ const LoginPage = () => {
   };
 
   const handleOAuthLogin = async (provider: 'google' | 'microsoft') => {
-    setIsLoading(true);
-    try {
-      const { user, org, token } = await authApi.loginWithOAuth(provider);
-      login(user, org, token);
-      navigate("/app/dashboard");
-    } catch (error) {
-      toast({
-        title: "Sign in failed",
-        description: "OAuth sign in failed",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    toast({
+      title: "Not implemented",
+      description: "OAuth authentication will be available soon",
+      variant: "destructive",
+    });
   };
 
   return (
