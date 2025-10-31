@@ -158,14 +158,19 @@ const LoginPage = () => {
         <p className="text-sm text-muted-foreground">
           Don't have access yet?
         </p>
-        <Button 
-          variant="outline" 
-          className="w-full"
-          onClick={() => setRequestAccessOpen(true)}
-        >
-          <HelpCircle className="w-4 h-4 mr-2" />
-          Request CRM Access
-        </Button>
+        <div className="space-y-2">
+          <Button asChild variant="outline" className="w-full">
+            <Link to="/auth/create-organization">
+              Create Your Organization
+            </Link>
+          </Button>
+          <Button asChild variant="ghost" className="w-full">
+            <Link to="/auth/accept-invitation">
+              <HelpCircle className="w-4 h-4 mr-2" />
+              Have an invitation?
+            </Link>
+          </Button>
+        </div>
         
         <p className="text-xs text-muted-foreground pt-2">
           Need help?{" "}

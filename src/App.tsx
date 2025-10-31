@@ -7,9 +7,12 @@ import { ThemeProvider } from "next-themes";
 
 // Auth pages
 import LoginPage from "./pages/auth/LoginPage";
+import SignupPage from "./pages/auth/SignupPage";
+import CreateOrganizationPage from "./pages/auth/CreateOrganizationPage";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import Verify2FAPage from "./pages/auth/Verify2FAPage";
 import AcceptInvitationPage from "./pages/auth/AcceptInvitationPage";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
 // App pages
 import AppLayout from "./components/layout/AppLayout";
@@ -60,12 +63,14 @@ const App = () => (
             
             {/* Auth routes */}
             <Route path="/auth/login" element={<LoginPage />} />
+            <Route path="/auth/signup" element={<SignupPage />} />
+            <Route path="/auth/create-organization" element={<CreateOrganizationPage />} />
             <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
             <Route path="/auth/verify-2fa" element={<Verify2FAPage />} />
             <Route path="/auth/accept-invitation" element={<AcceptInvitationPage />} />
             
             {/* Protected app routes */}
-            <Route path="/app" element={<AppLayout />}>
+            <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/app/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="profile" element={<ProfilePage />} />

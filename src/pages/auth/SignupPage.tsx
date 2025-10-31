@@ -33,16 +33,23 @@ const SignupPage = () => {
         </div>
       </div>
 
-      <Button asChild className="w-full btn-primary">
-        <Link to="/auth/accept-invitation">
-          <UserPlus className="w-4 h-4 mr-2" />
-          Accept Invitation
-          <ArrowRight className="w-4 h-4 ml-2" />
-        </Link>
-      </Button>
+      <div className="mt-6 space-y-3 text-center">
+        <Button asChild className="w-full btn-primary">
+          <Link to="/auth/create-organization">
+            <UserPlus className="w-4 h-4 mr-2" />
+            Create Your Organization
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Link>
+        </Button>
 
-      <div className="mt-6 text-center">
         <p className="text-body text-muted-foreground">
+          or{" "}
+          <Link to="/auth/accept-invitation" className="text-primary hover:underline font-medium">
+            accept an invitation
+          </Link>
+        </p>
+
+        <p className="text-body text-muted-foreground mt-4">
           Already have an account?{" "}
           <Link to="/auth/login" className="text-primary hover:underline font-medium">
             Sign in
