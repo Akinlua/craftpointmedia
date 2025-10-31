@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -30,13 +29,14 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { MoreHorizontal, UserX, Crown, ShieldCheck, User } from "lucide-react";
 import { TeamMember } from "@/types/org";
-import { settingsApi } from "@/lib/api/settings";
+import { teamApi } from "@/lib/api/team";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 
 interface TeamTableProps {
   members: TeamMember[];
   currentUserId?: string;
+  onUpdate?: () => void;
 }
 
 const getRoleInfo = (role: TeamMember['role']) => {
@@ -65,53 +65,45 @@ const getStatusInfo = (status: TeamMember['status']) => {
   }
 };
 
-const TeamTable = ({ members, currentUserId }: TeamTableProps) => {
+const TeamTable = ({ members, currentUserId, onUpdate }: TeamTableProps) => {
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [actionType, setActionType] = useState<'deactivate' | 'role-change' | null>(null);
   const [newRole, setNewRole] = useState<TeamMember['role']>('staff');
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  const updateRoleMutation = useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: TeamMember['role'] }) =>
-      settingsApi.updateTeamMemberRole(userId, role),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team-members'] });
-      toast({
-        title: "Role updated",
-        description: "Team member role has been updated successfully.",
-      });
+  const confirmAction = async () => {
+    if (!selectedMember) return;
+
+    setIsProcessing(true);
+    try {
+      if (actionType === 'role-change') {
+        await teamApi.updateTeamMemberRole(selectedMember.id, newRole);
+        toast({
+          title: "Role updated",
+          description: "Team member role has been updated successfully.",
+        });
+      } else if (actionType === 'deactivate') {
+        await teamApi.deactivateTeamMember(selectedMember.id);
+        toast({
+          title: "Member deactivated",
+          description: "Team member has been deactivated successfully.",
+        });
+      }
+      
       setSelectedMember(null);
       setActionType(null);
-    },
-    onError: (error: Error) => {
+      onUpdate?.();
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Operation failed",
         variant: "destructive",
       });
-    },
-  });
-
-  const deactivateMutation = useMutation({
-    mutationFn: (userId: string) => settingsApi.deactivateTeamMember(userId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['team-members'] });
-      toast({
-        title: "Member deactivated",
-        description: "Team member has been deactivated successfully.",
-      });
-      setSelectedMember(null);
-      setActionType(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const handleRoleChange = (member: TeamMember, role: TeamMember['role']) => {
     setSelectedMember(member);
@@ -122,16 +114,6 @@ const TeamTable = ({ members, currentUserId }: TeamTableProps) => {
   const handleDeactivate = (member: TeamMember) => {
     setSelectedMember(member);
     setActionType('deactivate');
-  };
-
-  const confirmAction = () => {
-    if (!selectedMember) return;
-
-    if (actionType === 'role-change') {
-      updateRoleMutation.mutate({ userId: selectedMember.id, role: newRole });
-    } else if (actionType === 'deactivate') {
-      deactivateMutation.mutate(selectedMember.id);
-    }
   };
 
   const canManage = (member: TeamMember) => {
@@ -253,9 +235,9 @@ const TeamTable = ({ members, currentUserId }: TeamTableProps) => {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmAction}
-              disabled={updateRoleMutation.isPending}
+              disabled={isProcessing}
             >
-              {updateRoleMutation.isPending ? "Updating..." : "Update Role"}
+              {isProcessing ? "Updating..." : "Update Role"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -277,10 +259,10 @@ const TeamTable = ({ members, currentUserId }: TeamTableProps) => {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmAction}
-              disabled={deactivateMutation.isPending}
+              disabled={isProcessing}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deactivateMutation.isPending ? "Deactivating..." : "Deactivate"}
+              {isProcessing ? "Deactivating..." : "Deactivate"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

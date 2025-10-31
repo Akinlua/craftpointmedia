@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -36,10 +35,10 @@ import {
 import { UserPlus, Users, Loader2, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import TeamTable from "@/components/settings/TeamTable";
-import { canCurrentUser } from "@/lib/rbac/can";
+import { teamApi } from "@/lib/api/team";
 import { authApi } from "@/lib/api/auth";
 import { useSession } from "@/lib/hooks/useSession";
-import { mockUsers } from "@/lib/mocks/users";
+import { TeamMember } from "@/types/org";
 
 const inviteSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -55,12 +54,36 @@ const TeamPage = () => {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const { profile, organization, role } = useSession();
+  
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Use mock data instead of API
-  const teamMembers = mockUsers.filter(u => u.orgId === (organization?.id || profile?.org_id));
-  const isLoading = false;
+  useEffect(() => {
+    loadTeamData();
+  }, []);
+
+  const loadTeamData = async () => {
+    setLoading(true);
+    try {
+      const [members, invites] = await Promise.all([
+        teamApi.getTeamMembers(),
+        teamApi.getPendingInvitations()
+      ]);
+      setTeamMembers(members);
+      setPendingInvites(invites);
+    } catch (error) {
+      console.error('Error loading team data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load team data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const form = useForm<InviteFormValues>({
     resolver: zodResolver(inviteSchema),
@@ -76,20 +99,19 @@ const TeamPage = () => {
     
     setIsSubmitting(true);
     try {
-      // Call backend API to send invitation
       await authApi.sendInvite({
         email: values.email,
         role: values.role,
         message: values.message,
       });
       
-      queryClient.invalidateQueries({ queryKey: ['team-members'] });
       toast({
         title: "Invitation sent!",
         description: `Invitation sent to ${values.email}. They will receive an email to join your team.`,
       });
       setInviteDialogOpen(false);
       form.reset();
+      loadTeamData(); // Reload team data
     } catch (error) {
       toast({
         title: "Error",
@@ -104,7 +126,7 @@ const TeamPage = () => {
   // Check if current user can manage team (only owner and manager)
   const canManageTeam = role ? (role.role === 'owner' || role.role === 'manager') : false;
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="space-y-6">
         <div>
@@ -300,7 +322,7 @@ const TeamPage = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Pending Invites</p>
                 <p className="text-2xl font-bold">
-                  {0}
+                  {pendingInvites.length}
                 </p>
               </div>
               <Mail className="w-8 h-8 text-warning" />
@@ -323,19 +345,9 @@ const TeamPage = () => {
         <CardContent>
           {teamMembers && teamMembers.length > 0 ? (
             <TeamTable 
-              members={teamMembers.map(user => ({
-                id: user.id,
-                email: user.email,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                role: user.role,
-                avatar: user.avatar,
-                status: 'active' as const,
-                lastLogin: new Date().toISOString(),
-                createdAt: user.createdAt,
-                updatedAt: user.updatedAt
-              }))} 
+              members={teamMembers} 
               currentUserId={profile?.id}
+              onUpdate={loadTeamData}
             />
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
