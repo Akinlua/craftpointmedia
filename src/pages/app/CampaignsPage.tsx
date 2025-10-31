@@ -10,7 +10,7 @@ import { useSession } from '@/lib/hooks/useSession';
 import { Plus } from 'lucide-react';
 
 export function CampaignsPage() {
-  const { user } = useSession();
+  const { role } = useSession();
   const [filters, setFilters] = useState<CampaignFilters>({});
 
   const { data, isLoading } = useQuery({
@@ -93,7 +93,7 @@ export function CampaignsPage() {
             isLoading={isLoading}
             filters={filters}
             onFiltersChange={setFilters}
-            userRole={user?.role || 'staff'}
+            userRole={role?.role || 'staff'}
           />
         </CardContent>
       </Card>

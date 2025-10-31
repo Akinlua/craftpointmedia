@@ -10,7 +10,7 @@ import { useSession } from '@/lib/hooks/useSession';
 import { Plus } from 'lucide-react';
 
 export function TemplatesPage() {
-  const { user } = useSession();
+  const { role } = useSession();
   const [filters, setFilters] = useState<TemplateFilters>({});
 
   const { data, isLoading } = useQuery({
@@ -76,7 +76,7 @@ export function TemplatesPage() {
             isLoading={isLoading}
             filters={filters}
             onFiltersChange={setFilters}
-            userRole={user?.role || 'staff'}
+            userRole={role?.role || 'staff'}
           />
         </CardContent>
       </Card>

@@ -15,6 +15,7 @@ import { useInboxStore } from '@/lib/stores/inboxStore';
 import { fetchConversations, fetchMessages, sendMessage, markAsRead } from '@/lib/api/inbox';
 import { useSession } from '@/lib/hooks/useSession';
 import { canCurrentUser } from '@/lib/rbac/can';
+import { Role } from '@/lib/rbac/permissions';
 
 const InboxPage = () => {
   const {
@@ -29,7 +30,7 @@ const InboxPage = () => {
     setSearchQuery,
   } = useInboxStore();
 
-  const { user } = useSession();
+  const { role } = useSession();
   const queryClient = useQueryClient();
 
   // Fetch conversations
@@ -83,7 +84,7 @@ const InboxPage = () => {
     });
   };
 
-  const canSendMessages = canCurrentUser('create', 'messages', user?.role);
+  const canSendMessages = role ? canCurrentUser('create', 'messages', role.role as Role) : false;
 
   return (
     <div className="h-screen flex flex-col">

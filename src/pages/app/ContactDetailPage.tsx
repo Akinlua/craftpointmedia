@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Contact, ContactTimeline } from "@/types/contact";
 import { contactsApi } from "@/lib/api/contacts";
 import { canCurrentUser } from "@/lib/rbac/can";
+import { Role } from '@/lib/rbac/permissions';
 import { useSession } from "@/lib/hooks/useSession";
 import { EditContactModal } from "@/components/contacts/EditContactModal";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
@@ -33,7 +34,7 @@ import { formatDistanceToNow, format } from "date-fns";
 const ContactDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useSession();
+  const { user, profile, role } = useSession();
   const { toast } = useToast();
   
   const [contact, setContact] = useState<Contact | null>(null);
@@ -113,7 +114,7 @@ const ContactDetailPage = () => {
   };
 
   const handleDeleteContact = async () => {
-    if (!contact || !canCurrentUser('delete', 'contacts', user?.role)) {
+    if (!contact || !role || !canCurrentUser('delete', 'contacts', role.role as Role)) {
       toast({
         title: "Permission denied",
         description: "You don't have permission to delete this contact",
@@ -212,9 +213,9 @@ const ContactDetailPage = () => {
     );
   }
 
-  const canEdit = canCurrentUser('update', 'contacts', user?.role);
-  const canDelete = canCurrentUser('delete', 'contacts', user?.role) || 
-                   (user?.id === contact.ownerId);
+  const canEdit = role ? canCurrentUser('update', 'contacts', role.role as Role) : false;
+  const canDelete = role ? (canCurrentUser('delete', 'contacts', role.role as Role) || 
+                   (profile?.id === contact.ownerId)) : false;
 
   return (
     <div className="space-y-6">

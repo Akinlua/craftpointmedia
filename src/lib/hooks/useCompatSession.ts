@@ -19,8 +19,8 @@ export function useCompatSession() {
     avatar: profile.avatar_url || '',
     emailVerified: true,
     twoFactorEnabled: false,
-    createdAt: profile.created_at,
-    updatedAt: profile.updated_at,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   } : null;
 
   const compatOrg = organization ? {
@@ -28,8 +28,8 @@ export function useCompatSession() {
     name: organization.name,
     domain: organization.domain || '',
     plan: organization.plan,
-    createdAt: organization.created_at || new Date().toISOString(),
-    updatedAt: organization.updated_at || new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   } : null;
 
   return {

@@ -20,6 +20,7 @@ import {
 import { Deal, DealActivity, DealNote } from "@/types/deal";
 import { dealsApi, dealStages } from "@/lib/api/deals";
 import { canCurrentUser } from "@/lib/rbac/can";
+import { Role } from '@/lib/rbac/permissions';
 import { useSession } from "@/lib/hooks/useSession";
 import { 
   ArrowLeft, 
@@ -41,7 +42,7 @@ import { formatDistanceToNow, format } from "date-fns";
 const DealDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useSession();
+  const { profile, role } = useSession();
   const { toast } = useToast();
   
   const [deal, setDeal] = useState<Deal | null>(null);
@@ -168,7 +169,7 @@ const DealDetailPage = () => {
   };
 
   const handleDeleteDeal = async () => {
-    if (!deal || !canCurrentUser('delete', 'deals', user?.role)) {
+    if (!deal || !role || !canCurrentUser('delete', 'deals', role.role as Role)) {
       toast({
         title: "Permission denied",
         description: "You don't have permission to delete this deal",
@@ -269,9 +270,9 @@ const DealDetailPage = () => {
     );
   }
 
-  const canEdit = canCurrentUser('update', 'deals', user?.role);
-  const canDelete = canCurrentUser('delete', 'deals', user?.role) || 
-                   (user?.id === deal.ownerId);
+  const canEdit = role ? canCurrentUser('update', 'deals', role.role as Role) : false;
+  const canDelete = role ? (canCurrentUser('delete', 'deals', role.role as Role) || 
+                   (profile?.id === deal.ownerId)) : false;
 
   return (
     <div className="space-y-6">

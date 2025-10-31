@@ -11,7 +11,7 @@ import { Plus } from 'lucide-react';
 
 export function AutomationsPage() {
   const navigate = useNavigate();
-  const { user } = useSession();
+  const { role } = useSession();
   const [filters, setFilters] = useState<AutomationFilters>({});
 
   const { data, isLoading } = useQuery({
@@ -95,7 +95,7 @@ export function AutomationsPage() {
             isLoading={isLoading}
             filters={filters}
             onFiltersChange={setFilters}
-            userRole={user?.role || 'staff'}
+            userRole={role?.role || 'staff'}
           />
         </CardContent>
       </Card>

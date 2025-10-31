@@ -39,7 +39,7 @@ import TeamTable from "@/components/settings/TeamTable";
 import { canCurrentUser } from "@/lib/rbac/can";
 import { authApi } from "@/lib/api/auth";
 import { useSession } from "@/lib/hooks/useSession";
-import { useCRMStore } from "@/lib/stores/crmStore";
+import { mockUsers } from "@/lib/mocks/users";
 
 const inviteSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -56,11 +56,10 @@ const TeamPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { profile, organization } = useSession();
-  const { users } = useCRMStore();
+  const { profile, organization, role } = useSession();
 
-  // Use mock data from CRM store instead of API
-  const teamMembers = users;
+  // Use mock data instead of API
+  const teamMembers = mockUsers.filter(u => u.orgId === (organization?.id || profile?.org_id));
   const isLoading = false;
 
   const form = useForm<InviteFormValues>({
@@ -73,7 +72,7 @@ const TeamPage = () => {
   });
 
   const onSubmit = async (values: InviteFormValues) => {
-    if (!currentUser || !currentOrg) return;
+    if (!profile || !organization) return;
     
     setIsSubmitting(true);
     try {
@@ -103,7 +102,7 @@ const TeamPage = () => {
   };
 
   // Check if current user can manage team (only owner and manager)
-  const canManageTeam = currentUser ? (currentUser.role === 'owner' || currentUser.role === 'manager') : false;
+  const canManageTeam = role ? (role.role === 'owner' || role.role === 'manager') : false;
 
   if (isLoading) {
     return (
@@ -195,7 +194,7 @@ const TeamPage = () => {
                                 </div>
                               </div>
                             </SelectItem>
-                            {(currentUser?.role === 'owner') && (
+                            {(role?.role === 'owner') && (
                               <SelectItem value="manager">
                                 <div>
                                   <div className="font-medium">Manager</div>
@@ -336,7 +335,7 @@ const TeamPage = () => {
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt
               }))} 
-              currentUserId={currentUser?.id}
+              currentUserId={profile?.id}
             />
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
