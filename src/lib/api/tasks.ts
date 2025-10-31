@@ -1,249 +1,218 @@
 import type { Task, TaskFilters, CreateTaskData, UpdateTaskData } from '@/types/task';
+import { supabase } from '@/integrations/supabase/client';
 
-// Mock data
-const mockTasks: Task[] = [
-  {
-    id: '1',
-    title: 'Follow up with Acme Corp on enterprise proposal',
-    description: 'Send detailed timeline and pricing breakdown',
-    status: 'pending',
-    priority: 'high',
-    dueDate: '2024-01-20',
-    assigneeId: 'user1',
-    assigneeName: 'John Doe',
-    assigneeAvatar: 'JD',
-    createdBy: 'user1',
-    createdByName: 'John Doe',
-    orgId: 'org1',
-    relatedType: 'deal',
-    relatedId: '1',
-    relatedTitle: 'Enterprise Software License',
-    reminderTime: 60,
-    createdAt: '2024-01-15T09:00:00Z',
-    updatedAt: '2024-01-15T09:00:00Z'
-  },
-  {
-    id: '2',
-    title: 'Prepare demo for TechStart Inc',
-    description: 'Customize demo to show marketing automation features',
-    status: 'in-progress',
-    priority: 'medium',
-    dueDate: '2024-01-22',
-    assigneeId: 'user2',
-    assigneeName: 'Sarah Wilson',
-    assigneeAvatar: 'SW',
-    createdBy: 'user1',
-    createdByName: 'John Doe',
-    orgId: 'org1',
-    relatedType: 'contact',
-    relatedId: '2',
-    relatedTitle: 'Sarah Johnson',
-    reminderTime: 120,
-    createdAt: '2024-01-16T10:00:00Z',
-    updatedAt: '2024-01-18T14:30:00Z'
-  },
-  {
-    id: '3',
-    title: 'Review and sign contract with Global Tech',
-    description: 'Legal team has approved, ready for signature',
-    status: 'pending',
-    priority: 'high',
-    dueDate: '2024-01-18',
-    assigneeId: 'user3',
-    assigneeName: 'Mike Chen',
-    assigneeAvatar: 'MC',
-    createdBy: 'user2',
-    createdByName: 'Sarah Wilson',
-    orgId: 'org1',
-    relatedType: 'deal',
-    relatedId: '2',
-    relatedTitle: 'Cloud Infrastructure Migration',
-    reminderTime: 30,
-    createdAt: '2024-01-10T11:00:00Z',
-    updatedAt: '2024-01-15T16:00:00Z'
-  },
-  {
-    id: '4',
-    title: 'Send welcome email to new customer',
-    description: 'Include onboarding checklist and support contacts',
-    status: 'completed',
-    priority: 'low',
-    dueDate: '2024-01-17',
-    completedAt: '2024-01-17T08:30:00Z',
-    assigneeId: 'user4',
-    assigneeName: 'Emily Davis',
-    assigneeAvatar: 'ED',
-    createdBy: 'user1',
-    createdByName: 'John Doe',
-    orgId: 'org1',
-    relatedType: 'contact',
-    relatedId: '3',
-    relatedTitle: 'Alex Brown',
-    reminderTime: 15,
-    reminderSent: true,
-    createdAt: '2024-01-16T09:00:00Z',
-    updatedAt: '2024-01-17T08:30:00Z'
-  },
-  {
-    id: '5',
-    title: 'Update CRM with meeting notes',
-    description: 'Document discussion points from yesterday\'s client call',
-    status: 'pending',
-    priority: 'medium',
-    dueDate: '2024-01-19',
-    assigneeId: 'user1',
-    assigneeName: 'John Doe',
-    assigneeAvatar: 'JD',
-    createdBy: 'user2',
-    createdByName: 'Sarah Wilson',
-    orgId: 'org1',
-    relatedType: 'contact',
-    relatedId: '4',
-    relatedTitle: 'Emily Wilson',
-    reminderTime: 45,
-    createdAt: '2024-01-17T13:00:00Z',
-    updatedAt: '2024-01-17T13:00:00Z'
-  }
-];
+// Helper to transform DB task to frontend Task type
+const transformTask = (dbTask: any, assigneeProfile?: any, creatorProfile?: any, relatedInfo?: any): Task => {
+  const isOverdue = new Date(dbTask.due_date) < new Date() && dbTask.status !== 'completed';
+  
+  return {
+    id: dbTask.id,
+    title: dbTask.title,
+    description: dbTask.description,
+    status: isOverdue ? 'overdue' : dbTask.status,
+    priority: dbTask.priority,
+    dueDate: dbTask.due_date,
+    completedAt: dbTask.completed_at,
+    assigneeId: dbTask.assignee_id,
+    assigneeName: assigneeProfile ? `${assigneeProfile.first_name} ${assigneeProfile.last_name}` : 'Unassigned',
+    assigneeAvatar: assigneeProfile?.avatar_url,
+    createdBy: dbTask.created_by,
+    createdByName: creatorProfile ? `${creatorProfile.first_name} ${creatorProfile.last_name}` : 'Unknown',
+    orgId: dbTask.org_id,
+    relatedType: dbTask.related_type,
+    relatedId: dbTask.related_id,
+    relatedTitle: relatedInfo?.title,
+    reminderTime: dbTask.reminder_time,
+    reminderSent: dbTask.reminder_sent,
+    createdAt: dbTask.created_at,
+    updatedAt: dbTask.updated_at
+  };
+};
 
-// Mock users for assignee selection
-export const mockUsers = [
-  { id: 'user1', name: 'John Doe', avatar: 'JD', role: 'owner' },
-  { id: 'user2', name: 'Sarah Wilson', avatar: 'SW', role: 'manager' },
-  { id: 'user3', name: 'Mike Chen', avatar: 'MC', role: 'staff' },
-  { id: 'user4', name: 'Emily Davis', avatar: 'ED', role: 'staff' }
-];
-
-// Simulate API delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+// Helper to transform Task to DB format
+const transformToDb = (task: Partial<CreateTaskData | UpdateTaskData>) => ({
+  title: task.title,
+  description: task.description,
+  status: (task as UpdateTaskData).status,
+  priority: task.priority,
+  due_date: task.dueDate,
+  completed_at: (task as UpdateTaskData).completedAt,
+  assignee_id: task.assigneeId,
+  related_type: task.relatedType,
+  related_id: task.relatedId,
+  reminder_time: task.reminderTime
+});
 
 export const tasksApi = {
   // Get tasks with filters
-  getTasks: async (filters?: TaskFilters, currentUserId?: string, userRole?: string): Promise<Task[]> => {
-    await delay(500);
-    
-    let filteredTasks = [...mockTasks];
-    
-    // RBAC: Staff can only see tasks assigned to them or created by them
-    if (userRole === 'staff' && currentUserId) {
-      filteredTasks = filteredTasks.filter(
-        task => task.assigneeId === currentUserId || task.createdBy === currentUserId
-      );
-    }
-    
+  getTasks: async (filters?: TaskFilters): Promise<Task[]> => {
+    let query = supabase
+      .from('tasks')
+      .select(`
+        *,
+        assignee:profiles!assignee_id(first_name, last_name, avatar_url),
+        creator:profiles!created_by(first_name, last_name, avatar_url)
+      `);
+
+    // Apply filters
     if (filters?.status?.length) {
-      filteredTasks = filteredTasks.filter(task => filters.status!.includes(task.status));
+      query = query.in('status', filters.status.filter(s => s !== 'overdue'));
     }
-    
+
     if (filters?.assigneeId?.length) {
-      filteredTasks = filteredTasks.filter(task => filters.assigneeId!.includes(task.assigneeId));
+      query = query.in('assignee_id', filters.assigneeId);
     }
-    
+
     if (filters?.relatedType?.length) {
-      filteredTasks = filteredTasks.filter(task => 
-        task.relatedType && filters.relatedType!.includes(task.relatedType)
-      );
+      query = query.in('related_type', filters.relatedType);
     }
-    
+
     if (filters?.dueDateFrom) {
-      filteredTasks = filteredTasks.filter(task => task.dueDate >= filters.dueDateFrom!);
+      query = query.gte('due_date', filters.dueDateFrom);
     }
-    
+
     if (filters?.dueDateTo) {
-      filteredTasks = filteredTasks.filter(task => task.dueDate <= filters.dueDateTo!);
+      query = query.lte('due_date', filters.dueDateTo);
     }
-    
+
     if (filters?.search) {
-      const search = filters.search.toLowerCase();
-      filteredTasks = filteredTasks.filter(task =>
-        task.title.toLowerCase().includes(search) ||
-        task.description?.toLowerCase().includes(search) ||
-        task.relatedTitle?.toLowerCase().includes(search)
-      );
+      query = query.ilike('title', `%${filters.search}%`);
     }
-    
-    // Add overdue status for display
-    return filteredTasks.map(task => {
-      const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'completed';
-      return {
-        ...task,
-        status: isOverdue ? 'overdue' as const : task.status
-      };
-    });
+
+    query = query.order('due_date', { ascending: true });
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    // Fetch related info for tasks
+    const tasks = await Promise.all((data || []).map(async (task) => {
+      let relatedInfo = null;
+      
+      if (task.related_type === 'contact' && task.related_id) {
+        const { data: contact } = await supabase
+          .from('contacts')
+          .select('first_name, last_name')
+          .eq('id', task.related_id)
+          .maybeSingle();
+        
+        if (contact) {
+          relatedInfo = { title: `${contact.first_name} ${contact.last_name}` };
+        }
+      } else if (task.related_type === 'deal' && task.related_id) {
+        const { data: deal } = await supabase
+          .from('deals')
+          .select('title')
+          .eq('id', task.related_id)
+          .maybeSingle();
+        
+        if (deal) {
+          relatedInfo = { title: deal.title };
+        }
+      }
+
+      return transformTask(task, task.assignee, task.creator, relatedInfo);
+    }));
+
+    return tasks;
   },
 
   // Create task
   createTask: async (data: CreateTaskData): Promise<Task> => {
-    await delay(300);
-    
-    const newTask: Task = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...data,
-      status: 'pending',
-      assigneeName: mockUsers.find(u => u.id === data.assigneeId)?.name || 'Unknown',
-      assigneeAvatar: mockUsers.find(u => u.id === data.assigneeId)?.avatar,
-      createdBy: 'user1', // Would come from session
-      createdByName: 'John Doe', // Would come from session
-      orgId: 'org1', // Would come from session
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session) throw new Error('Not authenticated');
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('org_id')
+      .eq('id', session.session.user.id)
+      .single();
+
+    if (!profile) throw new Error('Profile not found');
+
+    const dbTask = {
+      ...transformToDb(data),
+      org_id: profile.org_id,
+      created_by: session.session.user.id
     };
-    
-    mockTasks.push(newTask);
-    return newTask;
+
+    const { data: newTask, error } = await supabase
+      .from('tasks')
+      .insert(dbTask)
+      .select(`
+        *,
+        assignee:profiles!assignee_id(first_name, last_name, avatar_url),
+        creator:profiles!created_by(first_name, last_name, avatar_url)
+      `)
+      .single();
+
+    if (error) throw error;
+
+    return transformTask(newTask, newTask.assignee, newTask.creator);
   },
 
   // Update task
   updateTask: async (id: string, data: UpdateTaskData): Promise<Task> => {
-    await delay(200);
-    
-    const taskIndex = mockTasks.findIndex(task => task.id === id);
-    if (taskIndex === -1) {
-      throw new Error('Task not found');
-    }
-    
-    const updatedTask = {
-      ...mockTasks[taskIndex],
-      ...data,
-      updatedAt: new Date().toISOString(),
-      ...(data.status === 'completed' && !mockTasks[taskIndex].completedAt && {
-        completedAt: new Date().toISOString()
-      })
-    };
-    
-    mockTasks[taskIndex] = updatedTask;
-    return updatedTask;
+    const dbUpdates = transformToDb(data);
+
+    const { data: updatedTask, error } = await supabase
+      .from('tasks')
+      .update(dbUpdates)
+      .eq('id', id)
+      .select(`
+        *,
+        assignee:profiles!assignee_id(first_name, last_name, avatar_url),
+        creator:profiles!created_by(first_name, last_name, avatar_url)
+      `)
+      .single();
+
+    if (error) throw error;
+
+    return transformTask(updatedTask, updatedTask.assignee, updatedTask.creator);
   },
 
   // Delete task
   deleteTask: async (id: string): Promise<void> => {
-    await delay(200);
-    
-    const taskIndex = mockTasks.findIndex(task => task.id === id);
-    if (taskIndex === -1) {
-      throw new Error('Task not found');
-    }
-    
-    mockTasks.splice(taskIndex, 1);
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
   },
 
   // Get task by ID
   getTask: async (id: string): Promise<Task | null> => {
-    await delay(200);
-    
-    const task = mockTasks.find(task => task.id === id);
-    if (!task) return null;
-    
-    const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'completed';
-    return {
-      ...task,
-      status: isOverdue ? 'overdue' as const : task.status
-    };
+    const { data, error } = await supabase
+      .from('tasks')
+      .select(`
+        *,
+        assignee:profiles!assignee_id(first_name, last_name, avatar_url),
+        creator:profiles!created_by(first_name, last_name, avatar_url)
+      `)
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return null;
+
+    return transformTask(data, data.assignee, data.creator);
   },
 
   // Get users for assignee selection
-  getUsers: async (): Promise<typeof mockUsers> => {
-    await delay(100);
-    return mockUsers;
+  getUsers: async () => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, avatar_url')
+      .order('first_name');
+
+    if (error) throw error;
+
+    return (data || []).map(profile => ({
+      id: profile.id,
+      name: `${profile.first_name} ${profile.last_name}`,
+      avatar: profile.avatar_url,
+      role: 'staff' // Role would come from user_roles if needed
+    }));
   }
 };

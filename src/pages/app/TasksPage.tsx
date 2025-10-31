@@ -1,67 +1,61 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TaskList } from "@/components/tasks/TaskList";
-import { useCRMStore } from "@/lib/stores/crmStore";
+import { tasksApi } from "@/lib/api/tasks";
+import { useSession } from "@/lib/hooks/useSession";
 import { useToast } from "@/hooks/use-toast";
-import type { TaskFilters, CreateTaskData, UpdateTaskData } from "@/types/task";
+import type { Task, TaskFilters, CreateTaskData, UpdateTaskData } from "@/types/task";
 
 const TasksPage = () => {
   const { toast } = useToast();
-  const { tasks, users, currentUser, addTask, updateTask, deleteTask } = useCRMStore();
+  const { role } = useSession();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<TaskFilters>({});
 
-  // Filter tasks based on current filters and user role
-  const filteredTasks = tasks.filter(task => {
-    // RBAC: Staff can only see tasks assigned to them or created by them
-    if (currentUser?.role === 'staff') {
-      if (task.assigneeId !== currentUser.id && task.createdBy !== currentUser.id) {
-        return false;
-      }
-    }
-    
-    if (filters.status?.length && !filters.status.includes(task.status)) return false;
-    if (filters.assigneeId?.length && !filters.assigneeId.includes(task.assigneeId)) return false;
-    if (filters.relatedType?.length && task.relatedType && !filters.relatedType.includes(task.relatedType)) return false;
-    
-    if (filters.search) {
-      const search = filters.search.toLowerCase();
-      if (!task.title.toLowerCase().includes(search) &&
-          !task.description?.toLowerCase().includes(search) &&
-          !task.relatedTitle?.toLowerCase().includes(search)) return false;
-    }
-    
-    return true;
-  });
+  useEffect(() => {
+    loadTasks();
+    loadUsers();
+  }, [filters]);
 
-  // Add overdue status for display
-  const tasksWithOverdue = filteredTasks.map(task => {
-    const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'completed';
-    return {
-      ...task,
-      status: isOverdue ? 'overdue' as const : task.status
-    };
-  });
+  const loadTasks = async () => {
+    setLoading(true);
+    try {
+      const data = await tasksApi.getTasks(filters);
+      setTasks(data);
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load tasks",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      const data = await tasksApi.getUsers();
+      setUsers(data);
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+  };
+
 
   // Create task handler
   const handleCreateTask = async (data: CreateTaskData) => {
     try {
-      const assigneeInfo = users.find(u => u.id === data.assigneeId);
-      
-      const newTask = addTask({
-        ...data,
-        status: 'pending',
-        assigneeName: assigneeInfo ? `${assigneeInfo.firstName} ${assigneeInfo.lastName}` : 'Unknown',
-        assigneeAvatar: assigneeInfo?.avatar,
-        createdBy: currentUser?.id || 'user1',
-        createdByName: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'User',
-        orgId: 'org1',
-      });
+      await tasksApi.createTask(data);
 
       toast({
         title: "Task created",
         description: "The task has been created successfully.",
       });
       
-      return newTask;
+      loadTasks();
     } catch (error) {
       toast({
         title: "Error",
@@ -75,12 +69,14 @@ const TasksPage = () => {
   // Update task handler
   const handleUpdateTask = async (id: string, data: UpdateTaskData) => {
     try {
-      updateTask(id, data);
+      await tasksApi.updateTask(id, data);
       
       toast({
         title: "Task updated",
         description: "The task has been updated successfully.",
       });
+      
+      loadTasks();
     } catch (error) {
       toast({
         title: "Error",
@@ -94,12 +90,14 @@ const TasksPage = () => {
   // Delete task handler
   const handleDeleteTask = async (id: string) => {
     try {
-      deleteTask(id);
+      await tasksApi.deleteTask(id);
       
       toast({
         title: "Task deleted",
         description: "The task has been deleted successfully.",
       });
+      
+      loadTasks();
     } catch (error) {
       toast({
         title: "Error",
@@ -120,21 +118,16 @@ const TasksPage = () => {
 
   return (
     <TaskList
-      tasks={tasksWithOverdue}
-      users={users.map(u => ({ 
-        id: u.id, 
-        name: `${u.firstName} ${u.lastName}`, 
-        avatar: u.avatar, 
-        role: u.role 
-      }))}
+      tasks={tasks}
+      users={users}
       filters={filters}
       onFiltersChange={setFilters}
       onCreateTask={handleCreateTask}
       onUpdateTask={handleUpdateTask}
       onDeleteTask={handleDeleteTask}
       onToggleComplete={handleToggleComplete}
-      isLoading={false}
-      currentUserRole={currentUser?.role || 'staff'}
+      isLoading={loading}
+      currentUserRole={role?.role || 'staff'}
     />
   );
 };
