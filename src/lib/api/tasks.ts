@@ -30,18 +30,37 @@ const transformTask = (dbTask: any, assigneeProfile?: any, creatorProfile?: any,
 };
 
 // Helper to transform Task to DB format
-const transformToDb = (task: Partial<CreateTaskData | UpdateTaskData>) => ({
-  title: task.title,
-  description: task.description,
-  status: (task as UpdateTaskData).status,
-  priority: task.priority,
-  due_date: task.dueDate,
-  completed_at: (task as UpdateTaskData).completedAt,
-  assignee_id: task.assigneeId,
-  related_type: task.relatedType,
-  related_id: task.relatedId,
-  reminder_time: task.reminderTime
-});
+const transformToDb = (task: Partial<CreateTaskData | UpdateTaskData>) => {
+  const dbData: any = {
+    title: task.title,
+    description: task.description,
+    priority: task.priority,
+    assignee_id: task.assigneeId,
+    related_type: task.relatedType || null,
+    related_id: task.relatedId || null,
+    reminder_time: task.reminderTime
+  };
+
+  // Only include status if it's provided (for updates)
+  if ('status' in task && (task as UpdateTaskData).status) {
+    dbData.status = (task as UpdateTaskData).status;
+  }
+
+  // Only include completedAt if it's provided (for updates)
+  if ('completedAt' in task) {
+    dbData.completed_at = (task as UpdateTaskData).completedAt;
+  }
+
+  // Handle due_date - ensure it's in the correct format
+  if (task.dueDate) {
+    // If it's already a date string, use it; otherwise format it
+    dbData.due_date = typeof task.dueDate === 'string' 
+      ? task.dueDate 
+      : new Date(task.dueDate).toISOString().split('T')[0];
+  }
+
+  return dbData;
+};
 
 export const tasksApi = {
   // Get tasks with filters
@@ -119,6 +138,8 @@ export const tasksApi = {
 
   // Create task
   createTask: async (data: CreateTaskData): Promise<Task> => {
+    console.log('createTask called with data:', data);
+    
     const { data: session } = await supabase.auth.getSession();
     if (!session.session) throw new Error('Not authenticated');
 
@@ -136,6 +157,8 @@ export const tasksApi = {
       created_by: session.session.user.id
     };
 
+    console.log('Inserting task into database:', dbTask);
+
     const { data: newTask, error } = await supabase
       .from('tasks')
       .insert(dbTask)
@@ -146,7 +169,10 @@ export const tasksApi = {
       `)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Task creation error:', error);
+      throw error;
+    }
 
     return transformTask(newTask, newTask.assignee, newTask.creator);
   },
