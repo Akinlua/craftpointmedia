@@ -24,7 +24,15 @@ import DealDetailPage from "./pages/app/DealDetailPage";
 import InboxPage from "./pages/app/InboxPage";
 import TasksPage from "./pages/app/TasksPage";
 import AnalyticsPage from "./pages/app/AnalyticsPage";
-import SettingsPage from "./pages/app/SettingsPage";
+// Settings pages
+import SettingsLayout from "./components/settings/SettingsLayout";
+import BusinessProfilePage from "./pages/app/settings/ProfilePage";
+import TeamPage from "./pages/app/settings/TeamPage";
+import SecurityPage from "./pages/app/settings/SecurityPage";
+import NotificationsPage from "./pages/app/settings/NotificationsPage";
+import BrandingPage from "./pages/app/settings/BrandingPage";
+import IntegrationsPage from "./pages/app/settings/IntegrationsPage";
+import BillingPage from "./pages/app/settings/BillingPage";
 import ProductsPage from "./pages/app/ProductsPage";
 import InvoicesPage from "./pages/app/InvoicesPage";
 import NewInvoicePage from "./pages/app/NewInvoicePage";
@@ -82,7 +90,16 @@ const App = () => (
               <Route path="tasks" element={<TasksPage />} />
               <Route path="tasks/all" element={<TasksPage />} />
               <Route path="analytics" element={<AnalyticsPage />} />
-              <Route path="settings/*" element={<SettingsPage />} />
+              <Route path="settings" element={<SettingsLayout />}>
+                <Route index element={<Navigate to="/app/settings/profile" replace />} />
+                <Route path="profile" element={<BusinessProfilePage />} />
+                <Route path="team" element={<TeamPage />} />
+                <Route path="security" element={<SecurityPage />} />
+                <Route path="notifications" element={<NotificationsPage />} />
+                <Route path="branding" element={<BrandingPage />} />
+                <Route path="integrations" element={<IntegrationsPage />} />
+                <Route path="billing" element={<BillingPage />} />
+              </Route>
               <Route path="sales/products" element={<ProductsPage />} />
               <Route path="sales/invoices" element={<InvoicesPage />} />
               <Route path="sales/invoices/new" element={<NewInvoicePage />} />
