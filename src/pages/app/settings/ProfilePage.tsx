@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -112,19 +112,21 @@ const ProfilePage = () => {
   });
 
   // Update form when organization data is loaded
-  if (organization && !form.formState.isDirty) {
-    form.reset({
-      name: organization.name,
-      contactEmail: organization.contactEmail,
-      contactPhone: organization.contactPhone || "",
-      address: organization.address || "",
-      website: organization.website || "",
-      industry: organization.industry || "",
-      employeeCount: organization.employeeCount || "",
-      timezone: organization.timezone,
-      currency: organization.currency,
-    });
-  }
+  useEffect(() => {
+    if (organization && !form.formState.isDirty) {
+      form.reset({
+        name: organization.name,
+        contactEmail: organization.contactEmail,
+        contactPhone: organization.contactPhone || "",
+        address: organization.address || "",
+        website: organization.website || "",
+        industry: organization.industry || "",
+        employeeCount: organization.employeeCount || "",
+        timezone: organization.timezone,
+        currency: organization.currency,
+      });
+    }
+  }, [organization, form]);
 
   const updateOrganization = useMutation({
     mutationFn: settingsApi.updateOrganization,
