@@ -334,6 +334,84 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          created_at: string | null
+          email_deal_updates: boolean | null
+          email_enabled: boolean | null
+          email_invoice_updates: boolean | null
+          email_meeting_reminders: boolean | null
+          email_new_leads: boolean | null
+          email_task_reminders: boolean | null
+          email_team_updates: boolean | null
+          email_weekly_digest: boolean | null
+          id: string
+          inapp_deal_updates: boolean | null
+          inapp_enabled: boolean | null
+          inapp_invoice_updates: boolean | null
+          inapp_meeting_reminders: boolean | null
+          inapp_new_leads: boolean | null
+          inapp_task_reminders: boolean | null
+          inapp_team_updates: boolean | null
+          sms_enabled: boolean | null
+          sms_meeting_reminders: boolean | null
+          sms_task_reminders: boolean | null
+          sms_urgent_only: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email_deal_updates?: boolean | null
+          email_enabled?: boolean | null
+          email_invoice_updates?: boolean | null
+          email_meeting_reminders?: boolean | null
+          email_new_leads?: boolean | null
+          email_task_reminders?: boolean | null
+          email_team_updates?: boolean | null
+          email_weekly_digest?: boolean | null
+          id?: string
+          inapp_deal_updates?: boolean | null
+          inapp_enabled?: boolean | null
+          inapp_invoice_updates?: boolean | null
+          inapp_meeting_reminders?: boolean | null
+          inapp_new_leads?: boolean | null
+          inapp_task_reminders?: boolean | null
+          inapp_team_updates?: boolean | null
+          sms_enabled?: boolean | null
+          sms_meeting_reminders?: boolean | null
+          sms_task_reminders?: boolean | null
+          sms_urgent_only?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email_deal_updates?: boolean | null
+          email_enabled?: boolean | null
+          email_invoice_updates?: boolean | null
+          email_meeting_reminders?: boolean | null
+          email_new_leads?: boolean | null
+          email_task_reminders?: boolean | null
+          email_team_updates?: boolean | null
+          email_weekly_digest?: boolean | null
+          id?: string
+          inapp_deal_updates?: boolean | null
+          inapp_enabled?: boolean | null
+          inapp_invoice_updates?: boolean | null
+          inapp_meeting_reminders?: boolean | null
+          inapp_new_leads?: boolean | null
+          inapp_task_reminders?: boolean | null
+          inapp_team_updates?: boolean | null
+          sms_enabled?: boolean | null
+          sms_meeting_reminders?: boolean | null
+          sms_task_reminders?: boolean | null
+          sms_urgent_only?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       organizations: {
         Row: {
           created_at: string

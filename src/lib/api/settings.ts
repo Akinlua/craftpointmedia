@@ -3,6 +3,7 @@ import { Integration, IntegrationConnection, WebhookEndpoint } from '@/types/int
 import { BillingPlan, Subscription, PaymentMethod, Invoice, BillingUsage } from '@/types/billing';
 import { NotificationPreferences } from '@/types/notification';
 import { SecuritySettings, LoginSession, ApiKey, PasswordChangeRequest, TwoFactorSetup } from '@/types/security';
+import { supabase } from '@/integrations/supabase/client';
 
 // Mock data
 const mockOrganization: Organization = {
@@ -204,21 +205,147 @@ const mockBillingPlans: BillingPlan[] = [
 export const settingsApi = {
   // Organization
   async getOrganization(): Promise<Organization> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockOrganization;
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session) throw new Error('Not authenticated');
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('org_id')
+      .eq('id', session.session.user.id)
+      .single();
+
+    if (!profile) throw new Error('Profile not found');
+
+    const { data: org, error } = await supabase
+      .from('organizations')
+      .select('*')
+      .eq('id', profile.org_id)
+      .single();
+
+    if (error) throw error;
+    
+    // Map database fields to Organization type
+    return {
+      id: org.id,
+      name: org.name,
+      domain: org.domain || undefined,
+      logo: undefined,
+      favicon: undefined,
+      primaryColor: '#3B82F6',
+      secondaryColor: '#10B981',
+      timezone: 'America/New_York',
+      currency: 'USD',
+      contactEmail: org.name + '@example.com',
+      contactPhone: undefined,
+      address: undefined,
+      website: undefined,
+      industry: org.industry || undefined,
+      employeeCount: undefined,
+      whiteLabel: {
+        enabled: false,
+        hideBranding: false,
+      },
+      createdAt: org.created_at,
+      updatedAt: org.updated_at,
+    };
   },
 
   async updateOrganization(updates: Partial<Organization>): Promise<Organization> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { ...mockOrganization, ...updates, updatedAt: new Date().toISOString() };
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session) throw new Error('Not authenticated');
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('org_id')
+      .eq('id', session.session.user.id)
+      .single();
+
+    if (!profile) throw new Error('Profile not found');
+
+    const { data: org, error } = await supabase
+      .from('organizations')
+      .update({
+        name: updates.name,
+        domain: updates.domain,
+        industry: updates.industry,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', profile.org_id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: org.id,
+      name: org.name,
+      domain: org.domain || undefined,
+      logo: updates.logo,
+      favicon: updates.favicon,
+      primaryColor: updates.primaryColor || '#3B82F6',
+      secondaryColor: updates.secondaryColor || '#10B981',
+      timezone: updates.timezone || 'America/New_York',
+      currency: updates.currency || 'USD',
+      contactEmail: updates.contactEmail || org.name + '@example.com',
+      contactPhone: updates.contactPhone,
+      address: updates.address,
+      website: updates.website,
+      industry: org.industry || undefined,
+      employeeCount: updates.employeeCount,
+      whiteLabel: {
+        enabled: false,
+        hideBranding: false,
+      },
+      createdAt: org.created_at,
+      updatedAt: org.updated_at,
+    };
   },
 
   async updateBranding(branding: Partial<OrganizationBranding>): Promise<Organization> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { 
-      ...mockOrganization, 
-      ...branding, 
-      updatedAt: new Date().toISOString() 
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session) throw new Error('Not authenticated');
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('org_id')
+      .eq('id', session.session.user.id)
+      .single();
+
+    if (!profile) throw new Error('Profile not found');
+
+    const { data: org, error } = await supabase
+      .from('organizations')
+      .update({
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', profile.org_id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: org.id,
+      name: org.name,
+      domain: org.domain || undefined,
+      logo: branding.logo,
+      favicon: branding.favicon,
+      primaryColor: branding.primaryColor || '#3B82F6',
+      secondaryColor: branding.secondaryColor || '#10B981',
+      timezone: 'America/New_York',
+      currency: 'USD',
+      contactEmail: org.name + '@example.com',
+      contactPhone: undefined,
+      address: undefined,
+      website: undefined,
+      industry: org.industry || undefined,
+      employeeCount: undefined,
+      whiteLabel: branding.whiteLabel || {
+        enabled: false,
+        hideBranding: false,
+      },
+      createdAt: org.created_at,
+      updatedAt: org.updated_at,
     };
   },
 
@@ -293,47 +420,133 @@ export const settingsApi = {
 
   // Notifications
   async getNotificationPreferences(): Promise<NotificationPreferences> {
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session) throw new Error('Not authenticated');
+
+    const { data: prefs, error } = await supabase
+      .from('notification_preferences')
+      .select('*')
+      .eq('user_id', session.session.user.id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+
+    // If no preferences exist, create default ones
+    if (!prefs) {
+      const { data: newPrefs, error: insertError } = await supabase
+        .from('notification_preferences')
+        .insert({ user_id: session.session.user.id })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+      
+      return {
+        id: newPrefs.id,
+        userId: newPrefs.user_id,
+        email: {
+          enabled: newPrefs.email_enabled,
+          newLeads: newPrefs.email_new_leads,
+          dealUpdates: newPrefs.email_deal_updates,
+          taskReminders: newPrefs.email_task_reminders,
+          meetingReminders: newPrefs.email_meeting_reminders,
+          invoiceUpdates: newPrefs.email_invoice_updates,
+          teamUpdates: newPrefs.email_team_updates,
+          weeklyDigest: newPrefs.email_weekly_digest,
+        },
+        sms: {
+          enabled: newPrefs.sms_enabled,
+          urgentOnly: newPrefs.sms_urgent_only,
+          taskReminders: newPrefs.sms_task_reminders,
+          meetingReminders: newPrefs.sms_meeting_reminders,
+        },
+        inApp: {
+          enabled: newPrefs.inapp_enabled,
+          newLeads: newPrefs.inapp_new_leads,
+          dealUpdates: newPrefs.inapp_deal_updates,
+          taskReminders: newPrefs.inapp_task_reminders,
+          meetingReminders: newPrefs.inapp_meeting_reminders,
+          invoiceUpdates: newPrefs.inapp_invoice_updates,
+          teamUpdates: newPrefs.inapp_team_updates,
+        },
+        updatedAt: newPrefs.updated_at,
+      };
+    }
+
     return {
-      id: 'notif-1',
-      userId: 'user-1',
+      id: prefs.id,
+      userId: prefs.user_id,
       email: {
-        enabled: true,
-        newLeads: true,
-        dealUpdates: true,
-        taskReminders: true,
-        meetingReminders: true,
-        invoiceUpdates: false,
-        teamUpdates: true,
-        weeklyDigest: true,
+        enabled: prefs.email_enabled,
+        newLeads: prefs.email_new_leads,
+        dealUpdates: prefs.email_deal_updates,
+        taskReminders: prefs.email_task_reminders,
+        meetingReminders: prefs.email_meeting_reminders,
+        invoiceUpdates: prefs.email_invoice_updates,
+        teamUpdates: prefs.email_team_updates,
+        weeklyDigest: prefs.email_weekly_digest,
       },
       sms: {
-        enabled: false,
-        urgentOnly: true,
-        taskReminders: false,
-        meetingReminders: true,
+        enabled: prefs.sms_enabled,
+        urgentOnly: prefs.sms_urgent_only,
+        taskReminders: prefs.sms_task_reminders,
+        meetingReminders: prefs.sms_meeting_reminders,
       },
       inApp: {
-        enabled: true,
-        newLeads: true,
-        dealUpdates: true,
-        taskReminders: true,
-        meetingReminders: true,
-        invoiceUpdates: true,
-        teamUpdates: true,
+        enabled: prefs.inapp_enabled,
+        newLeads: prefs.inapp_new_leads,
+        dealUpdates: prefs.inapp_deal_updates,
+        taskReminders: prefs.inapp_task_reminders,
+        meetingReminders: prefs.inapp_meeting_reminders,
+        invoiceUpdates: prefs.inapp_invoice_updates,
+        teamUpdates: prefs.inapp_team_updates,
       },
-      updatedAt: new Date().toISOString(),
+      updatedAt: prefs.updated_at,
     };
   },
 
   async updateNotificationPreferences(preferences: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const current = await this.getNotificationPreferences();
-    return {
-      ...current,
-      ...preferences,
-      updatedAt: new Date().toISOString(),
-    };
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session) throw new Error('Not authenticated');
+
+    const dbUpdate: any = {};
+    
+    if (preferences.email) {
+      if (preferences.email.enabled !== undefined) dbUpdate.email_enabled = preferences.email.enabled;
+      if (preferences.email.newLeads !== undefined) dbUpdate.email_new_leads = preferences.email.newLeads;
+      if (preferences.email.dealUpdates !== undefined) dbUpdate.email_deal_updates = preferences.email.dealUpdates;
+      if (preferences.email.taskReminders !== undefined) dbUpdate.email_task_reminders = preferences.email.taskReminders;
+      if (preferences.email.meetingReminders !== undefined) dbUpdate.email_meeting_reminders = preferences.email.meetingReminders;
+      if (preferences.email.invoiceUpdates !== undefined) dbUpdate.email_invoice_updates = preferences.email.invoiceUpdates;
+      if (preferences.email.teamUpdates !== undefined) dbUpdate.email_team_updates = preferences.email.teamUpdates;
+      if (preferences.email.weeklyDigest !== undefined) dbUpdate.email_weekly_digest = preferences.email.weeklyDigest;
+    }
+    
+    if (preferences.sms) {
+      if (preferences.sms.enabled !== undefined) dbUpdate.sms_enabled = preferences.sms.enabled;
+      if (preferences.sms.urgentOnly !== undefined) dbUpdate.sms_urgent_only = preferences.sms.urgentOnly;
+      if (preferences.sms.taskReminders !== undefined) dbUpdate.sms_task_reminders = preferences.sms.taskReminders;
+      if (preferences.sms.meetingReminders !== undefined) dbUpdate.sms_meeting_reminders = preferences.sms.meetingReminders;
+    }
+    
+    if (preferences.inApp) {
+      if (preferences.inApp.enabled !== undefined) dbUpdate.inapp_enabled = preferences.inApp.enabled;
+      if (preferences.inApp.newLeads !== undefined) dbUpdate.inapp_new_leads = preferences.inApp.newLeads;
+      if (preferences.inApp.dealUpdates !== undefined) dbUpdate.inapp_deal_updates = preferences.inApp.dealUpdates;
+      if (preferences.inApp.taskReminders !== undefined) dbUpdate.inapp_task_reminders = preferences.inApp.taskReminders;
+      if (preferences.inApp.meetingReminders !== undefined) dbUpdate.inapp_meeting_reminders = preferences.inApp.meetingReminders;
+      if (preferences.inApp.invoiceUpdates !== undefined) dbUpdate.inapp_invoice_updates = preferences.inApp.invoiceUpdates;
+      if (preferences.inApp.teamUpdates !== undefined) dbUpdate.inapp_team_updates = preferences.inApp.teamUpdates;
+    }
+
+    const { error } = await supabase
+      .from('notification_preferences')
+      .update(dbUpdate)
+      .eq('user_id', session.session.user.id);
+
+    if (error) throw error;
+
+    return this.getNotificationPreferences();
   },
 
   // Billing
@@ -457,14 +670,15 @@ export const settingsApi = {
   },
 
   async changePassword(request: PasswordChangeRequest): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    if (request.currentPassword !== 'password123') {
-      throw new Error('Current password is incorrect');
-    }
     if (request.newPassword !== request.confirmPassword) {
       throw new Error('Passwords do not match');
     }
-    // Password changed successfully
+
+    const { error } = await supabase.auth.updateUser({
+      password: request.newPassword
+    });
+
+    if (error) throw error;
   },
 
   async setup2FA(): Promise<TwoFactorSetup> {
