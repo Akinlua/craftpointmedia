@@ -118,6 +118,15 @@ const SettingsLayout = () => {
 
       {/* Mobile Sidebar */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SheetTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="md:hidden fixed top-4 left-4 z-50"
+          >
+            <Menu className="h-4 w-4" />
+          </Button>
+        </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
           <div className="flex flex-col h-full">
             <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
@@ -139,22 +148,8 @@ const SettingsLayout = () => {
       {/* Main Content */}
       <div className="flex flex-col w-0 flex-1 overflow-hidden">
         {/* Mobile header */}
-        <div className="md:hidden">
-          <div className="relative z-10 flex-shrink-0 flex h-16 bg-background border-b border-border">
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="px-4 border-r border-border rounded-none"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <Menu className="h-4 w-4" />
-              </Button>
-            </SheetTrigger>
-            <div className="flex-1 px-4 flex justify-between items-center">
-              <h1 className="text-lg font-semibold">Settings</h1>
-            </div>
-          </div>
+        <div className="md:hidden h-16 bg-background border-b border-border flex items-center px-16">
+          <h1 className="text-lg font-semibold">Settings</h1>
         </div>
 
         {/* Page content */}
