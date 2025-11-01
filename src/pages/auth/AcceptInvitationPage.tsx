@@ -99,14 +99,18 @@ const AcceptInvitationPage = () => {
       const { data: result, error } = await supabase.functions.invoke('accept-invitation', {
         body: {
           token,
-          firstName: data.firstName,
-          lastName: data.lastName,
           password: data.password,
+          first_name: data.firstName,
+          last_name: data.lastName,
         },
       });
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error(error.message || 'Failed to accept invitation');
+      }
+
+      if (result?.error) {
+        throw new Error(result.error);
       }
 
       toast({

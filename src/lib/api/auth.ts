@@ -1,5 +1,6 @@
 import { User, Organization } from '@/types/user';
 import { ENV, API_ENDPOINTS } from '@/lib/config/env';
+import { supabase } from '@/integrations/supabase/client';
 
 // Mock data
 const mockOrganizations: Organization[] = [
@@ -208,27 +209,26 @@ export const authApi = {
   },
 
   async sendInvite(data: InviteData): Promise<{ success: boolean; message: string }> {
-    return callApiWithFallback(
-      async () => {
-        const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.AUTH.INVITE}`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            // TODO: Add auth token when available
-            // 'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify(data),
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to send invitation');
-        }
-        
-        return await response.json();
+    const { data: result, error } = await supabase.functions.invoke('send-invitation', {
+      body: {
+        email: data.email,
+        role: data.role,
+        message: data.message,
       },
-      // Fallback to mock data
-      { success: true, message: 'Invitation sent successfully (mock)' }
-    );
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Failed to send invitation');
+    }
+
+    if (result?.error) {
+      throw new Error(result.error);
+    }
+
+    return {
+      success: true,
+      message: result?.message || 'Invitation sent successfully'
+    };
   },
 
   async logout(): Promise<void> {
