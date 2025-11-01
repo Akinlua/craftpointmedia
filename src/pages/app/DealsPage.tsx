@@ -7,12 +7,14 @@ import { Deal } from "@/types/deal";
 import { dealsApi } from "@/lib/api/deals";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, DollarSign, Calendar, User } from "lucide-react";
+import { AddDealModal } from "@/components/deals/AddDealModal";
 
 const DealsPage = () => {
   const { toast } = useToast();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [draggedDeal, setDraggedDeal] = useState<string | null>(null);
+  const [showAddDeal, setShowAddDeal] = useState(false);
 
   useEffect(() => {
     loadDeals();
@@ -107,7 +109,7 @@ const DealsPage = () => {
             Track and manage your deals through the sales process
           </p>
         </div>
-        <Button className="btn-primary gap-2">
+        <Button className="btn-primary gap-2" onClick={() => setShowAddDeal(true)}>
           <Plus className="w-4 h-4" />
           Add Deal
         </Button>
@@ -206,6 +208,11 @@ const DealsPage = () => {
           );
         })}
       </div>
+
+      <AddDealModal
+        open={showAddDeal}
+        onOpenChange={setShowAddDeal}
+      />
     </div>
   );
 };

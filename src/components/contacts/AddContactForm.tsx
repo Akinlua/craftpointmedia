@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -61,22 +61,30 @@ export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
   const [currentUserId, setCurrentUserId] = useState<string>("");
 
   // Load users and current user
-  useState(() => {
+  useEffect(() => {
     const loadData = async () => {
       const { data: session } = await supabase.auth.getSession();
       if (session.session) {
         setCurrentUserId(session.session.user.id);
         
-        const { data: profiles } = await supabase
+        const { data: profile } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name')
-          .eq('org_id', (await supabase.from('profiles').select('org_id').eq('id', session.session.user.id).single()).data?.org_id);
+          .select('org_id')
+          .eq('id', session.session.user.id)
+          .single();
         
-        if (profiles) setUsers(profiles);
+        if (profile) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name')
+            .eq('org_id', profile.org_id);
+          
+          if (profiles) setUsers(profiles);
+        }
       }
     };
     loadData();
-  });
+  }, []);
 
   const form = useForm<ContactFormData>({
     resolver: zodResolver(contactFormSchema),

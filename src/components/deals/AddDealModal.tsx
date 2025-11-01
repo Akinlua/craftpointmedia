@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +42,7 @@ export const AddDealModal = ({
   });
 
   // Load data on mount
-  useState(() => {
+  useEffect(() => {
     const loadData = async () => {
       const { data: session } = await supabase.auth.getSession();
       if (session.session) {
@@ -73,7 +73,7 @@ export const AddDealModal = ({
       }
     };
     loadData();
-  });
+  }, []);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
