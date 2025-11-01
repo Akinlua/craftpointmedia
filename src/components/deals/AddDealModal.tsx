@@ -6,9 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Deal, DealStage } from "@/types/deal";
-import { useCRMStore } from "@/lib/stores/crmStore";
 import { useToast } from "@/hooks/use-toast";
-import { dealStages } from "@/lib/api/deals";
+import { dealStages, dealsApi } from "@/lib/api/deals";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AddDealModalProps {
   open: boolean;
@@ -23,19 +23,56 @@ export const AddDealModal = ({
   preselectedContactId,
   preselectedStageId 
 }: AddDealModalProps) => {
-  const { addDeal, contacts, users, currentUser } = useCRMStore();
   const { toast } = useToast();
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
+  const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
     title: '',
     value: 0,
     currency: 'USD',
     stage: preselectedStageId || 'new',
-    ownerId: currentUser?.id || '',
+    ownerId: '',
     contactIds: preselectedContactId ? [preselectedContactId] : [] as string[],
     closeDate: '',
     description: '',
     probability: 0
+  });
+
+  // Load data on mount
+  useState(() => {
+    const loadData = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        setCurrentUserId(session.session.user.id);
+        setFormData(prev => ({ ...prev, ownerId: session.session.user.id }));
+        
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('org_id')
+          .eq('id', session.session.user.id)
+          .single();
+
+        if (profile) {
+          // Load contacts
+          const { data: contactsData } = await supabase
+            .from('contacts')
+            .select('id, first_name, last_name, company')
+            .eq('org_id', profile.org_id);
+          if (contactsData) setContacts(contactsData);
+
+          // Load users
+          const { data: usersData } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name')
+            .eq('org_id', profile.org_id);
+          if (usersData) setUsers(usersData);
+        }
+      }
+    };
+    loadData();
   });
 
   const handleInputChange = (field: string, value: any) => {
@@ -56,7 +93,7 @@ export const AddDealModal = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.title || !formData.value || formData.contactIds.length === 0) {
@@ -69,8 +106,10 @@ export const AddDealModal = ({
     }
 
     try {
+      setLoading(true);
+      
       const selectedContacts = contacts.filter(c => formData.contactIds.includes(c.id));
-      const owner = users.find(u => u.id === formData.ownerId) || currentUser;
+      const owner = users.find(u => u.id === formData.ownerId);
       
       const dealData = {
         title: formData.title,
@@ -80,20 +119,17 @@ export const AddDealModal = ({
         stageId: formData.stage,
         probability: formData.probability,
         ownerId: formData.ownerId,
-        ownerName: owner ? `${owner.firstName} ${owner.lastName}` : '',
-        ownerAvatar: owner?.avatar,
+        ownerName: owner ? `${owner.first_name} ${owner.last_name}` : '',
         contactIds: formData.contactIds,
         contacts: selectedContacts.map(c => ({
           id: c.id,
-          name: `${c.firstName} ${c.lastName}`,
-          avatar: c.avatar
+          name: `${c.first_name} ${c.last_name}`
         })),
         closeDate: formData.closeDate || undefined,
-        description: formData.description || undefined,
-        orgId: currentUser?.orgId || 'org1'
+        description: formData.description || undefined
       };
 
-      const newDeal = addDeal(dealData);
+      await dealsApi.createDeal(dealData);
 
       toast({
         title: "Deal Created",
@@ -106,7 +142,7 @@ export const AddDealModal = ({
         value: 0,
         currency: 'USD',
         stage: 'new',
-        ownerId: currentUser?.id || '',
+        ownerId: currentUserId,
         contactIds: [],
         closeDate: '',
         description: '',
@@ -114,12 +150,16 @@ export const AddDealModal = ({
       });
 
       onOpenChange(false);
+      window.location.reload(); // Refresh to show new deal
     } catch (error) {
+      console.error('Error creating deal:', error);
       toast({
         title: "Error",
         description: "Failed to create deal",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -208,7 +248,7 @@ export const AddDealModal = ({
                 <SelectContent>
                   {users.map(user => (
                     <SelectItem key={user.id} value={user.id}>
-                      {user.firstName} {user.lastName}
+                      {user.first_name} {user.last_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -220,7 +260,7 @@ export const AddDealModal = ({
           <div className="space-y-2">
             <Label>Associated Contacts *</Label>
             <div className="max-h-32 overflow-y-auto border rounded-md p-2">
-              {contacts.length === 0 ? (
+                {contacts.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No contacts available</p>
               ) : (
                 contacts.map(contact => (
@@ -236,7 +276,7 @@ export const AddDealModal = ({
                       htmlFor={`contact-${contact.id}`}
                       className="text-sm flex-1 cursor-pointer"
                     >
-                      {contact.firstName} {contact.lastName}
+                      {contact.first_name} {contact.last_name}
                       {contact.company && (
                         <span className="text-muted-foreground"> - {contact.company}</span>
                       )}
@@ -285,11 +325,11 @@ export const AddDealModal = ({
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit">
-              Create Deal
+            <Button type="submit" disabled={loading} className="btn-primary">
+              {loading ? 'Creating...' : 'Create Deal'}
             </Button>
           </div>
         </form>
