@@ -1,69 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bell, Check, Trash2, User, DollarSign, CheckSquare, MessageSquare } from "lucide-react";
+import { Bell, Check, Trash2, User, DollarSign, CheckSquare, MessageSquare, FileText, Users, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface Notification {
-  id: string;
-  type: 'lead' | 'deal' | 'task' | 'message';
-  title: string;
-  message: string;
-  timestamp: string;
-  read: boolean;
-  priority: 'low' | 'medium' | 'high';
-}
-
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'lead',
-    title: 'New Lead Added',
-    message: 'Sarah Johnson from Tech Corp submitted a contact form',
-    timestamp: '2 minutes ago',
-    read: false,
-    priority: 'high'
-  },
-  {
-    id: '2',
-    type: 'deal',
-    title: 'Deal Stage Updated',
-    message: 'Enterprise Software Deal moved to Proposal stage',
-    timestamp: '15 minutes ago',
-    read: false,
-    priority: 'medium'
-  },
-  {
-    id: '3',
-    type: 'task',
-    title: 'Task Due Soon',
-    message: 'Follow up with John Smith is due in 30 minutes',
-    timestamp: '1 hour ago',
-    read: true,
-    priority: 'high'
-  },
-  {
-    id: '4',
-    type: 'message',
-    title: 'New Message',
-    message: 'You have a new email from marketing team',
-    timestamp: '2 hours ago',
-    read: true,
-    priority: 'low'
-  },
-  {
-    id: '5',
-    type: 'deal',
-    title: 'Deal Won',
-    message: 'Mobile App Development deal closed successfully',
-    timestamp: '1 day ago',
-    read: true,
-    priority: 'high'
-  }
-];
+import { notificationsApi, Notification } from "@/lib/api/notifications";
+import { supabase } from "@/integrations/supabase/client";
+import { formatDistanceToNow } from "date-fns";
+import { toast } from "@/hooks/use-toast";
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -73,8 +20,14 @@ const getNotificationIcon = (type: string) => {
       return DollarSign;
     case 'task':
       return CheckSquare;
-    case 'message':
+    case 'meeting':
       return MessageSquare;
+    case 'invoice':
+      return FileText;
+    case 'team':
+      return Users;
+    case 'system':
+      return AlertCircle;
     default:
       return Bell;
   }
@@ -101,47 +54,122 @@ interface NotificationPanelProps {
 
 export const NotificationPanel = ({ children }: NotificationPanelProps) => {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState(mockNotifications);
-  
+  const queryClient = useQueryClient();
+
+  // Fetch notifications
+  const { data: notifications = [], isLoading } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: notificationsApi.getNotifications,
+  });
+
+  // Subscribe to realtime updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('notifications-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications'
+        },
+        () => {
+          // Refetch notifications when any change occurs
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
-  };
+  // Mark as read mutation
+  const markAsReadMutation = useMutation({
+    mutationFn: notificationsApi.markAsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to mark notification as read",
+        variant: "destructive",
+      });
+    }
+  });
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(n => ({ ...n, read: true }))
-    );
-  };
+  // Mark all as read mutation
+  const markAllAsReadMutation = useMutation({
+    mutationFn: notificationsApi.markAllAsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      toast({
+        title: "Success",
+        description: "All notifications marked as read",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to mark all as read",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: notificationsApi.deleteNotification,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete notification",
+        variant: "destructive",
+      });
+    }
+  });
 
   const handleNotificationClick = (notification: Notification) => {
     // Mark as read when clicked
-    markAsRead(notification.id);
-    
-    // Navigate to relevant section
-    switch (notification.type) {
-      case 'lead':
-        navigate('/app/contacts?filter=leads');
-        break;
-      case 'deal':
-        navigate('/app/deals');
-        break;
-      case 'task':
-        navigate('/app/tasks');
-        break;
-      case 'message':
-        navigate('/app/inbox');
-        break;
-      default:
-        break;
+    if (!notification.read) {
+      markAsReadMutation.mutate(notification.id);
     }
-  };
-
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    
+    // Navigate using action_url or fallback to type-based navigation
+    if (notification.action_url) {
+      navigate(notification.action_url);
+    } else {
+      // Fallback navigation based on type
+      switch (notification.type) {
+        case 'lead':
+          navigate('/app/contacts?filter=leads');
+          break;
+        case 'deal':
+          navigate('/app/deals');
+          break;
+        case 'task':
+          navigate('/app/tasks');
+          break;
+        case 'meeting':
+          navigate('/app/tasks');
+          break;
+        case 'invoice':
+          navigate('/app/invoices');
+          break;
+        case 'team':
+          navigate('/app/settings/team');
+          break;
+        default:
+          break;
+      }
+    }
   };
 
   return (
@@ -165,7 +193,8 @@ export const NotificationPanel = ({ children }: NotificationPanelProps) => {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={markAllAsRead}
+                onClick={() => markAllAsReadMutation.mutate()}
+                disabled={markAllAsReadMutation.isPending}
                 className="text-xs"
               >
                 Mark all read
@@ -176,7 +205,12 @@ export const NotificationPanel = ({ children }: NotificationPanelProps) => {
 
         <ScrollArea className="mt-6 h-[calc(100vh-8rem)]">
           <div className="space-y-2">
-            {notifications.length === 0 ? (
+            {isLoading ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Bell className="h-16 w-16 mx-auto mb-4 opacity-20 animate-pulse" />
+                <p className="text-sm">Loading notifications...</p>
+              </div>
+            ) : notifications.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Bell className="h-16 w-16 mx-auto mb-4 opacity-20" />
                 <p className="text-lg font-medium mb-2">All caught up!</p>
@@ -221,7 +255,11 @@ export const NotificationPanel = ({ children }: NotificationPanelProps) => {
                                 variant="ghost"
                                 size="icon"
                                 className="h-6 w-6"
-                                onClick={() => markAsRead(notification.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  markAsReadMutation.mutate(notification.id);
+                                }}
+                                disabled={markAsReadMutation.isPending}
                               >
                                 <Check className="h-3 w-3" />
                               </Button>
@@ -230,7 +268,11 @@ export const NotificationPanel = ({ children }: NotificationPanelProps) => {
                               variant="ghost"
                               size="icon"
                               className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                              onClick={() => deleteNotification(notification.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteMutation.mutate(notification.id);
+                              }}
+                              disabled={deleteMutation.isPending}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -245,7 +287,7 @@ export const NotificationPanel = ({ children }: NotificationPanelProps) => {
                         </p>
                         
                         <p className="text-xs text-muted-foreground">
-                          {notification.timestamp}
+                          {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                         </p>
                       </div>
                     </div>
