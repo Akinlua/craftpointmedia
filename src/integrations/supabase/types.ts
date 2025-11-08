@@ -334,6 +334,175 @@ export type Database = {
           },
         ]
       }
+      invoice_activities: {
+        Row: {
+          channel: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          invoice_id: string
+          metadata: Json | null
+          title: string
+          type: string
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          invoice_id: string
+          metadata?: Json | null
+          title: string
+          type: string
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          invoice_id?: string
+          metadata?: Json | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_activities_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_line_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          invoice_id: string
+          line_total: number
+          product_id: string | null
+          product_name: string
+          quantity: number
+          tax_rate: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_id: string
+          line_total?: number
+          product_id?: string | null
+          product_name: string
+          quantity?: number
+          tax_rate?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_id?: string
+          line_total?: number
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+          tax_rate?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          contact_id: string
+          created_at: string
+          currency: string
+          due_date: string | null
+          id: string
+          notes: string | null
+          number: string
+          org_id: string
+          owner_id: string
+          paid_at: string | null
+          payment_terms: number | null
+          sent_at: string | null
+          status: string
+          subtotal: number
+          tax_total: number
+          terms: string | null
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          currency?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          number: string
+          org_id: string
+          owner_id: string
+          paid_at?: string | null
+          payment_terms?: number | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          tax_total?: number
+          terms?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          currency?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          number?: string
+          org_id?: string
+          owner_id?: string
+          paid_at?: string | null
+          payment_terms?: number | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          tax_total?: number
+          terms?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           created_at: string | null
@@ -486,6 +655,48 @@ export type Database = {
           name?: string
           owner_id?: string | null
           plan?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          org_id: string
+          price: number
+          sku: string
+          tax_rate: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          org_id: string
+          price?: number
+          sku: string
+          tax_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          org_id?: string
+          price?: number
+          sku?: string
+          tax_rate?: number
           updated_at?: string
         }
         Relationships: []
