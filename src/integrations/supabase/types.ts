@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_recipients: {
+        Row: {
+          bounce_reason: string | null
+          campaign_id: string
+          campaign_type: string
+          clicked_at: string | null
+          contact_id: string
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          opened_at: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          bounce_reason?: string | null
+          campaign_id: string
+          campaign_type: string
+          clicked_at?: string | null
+          contact_id: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          bounce_reason?: string | null
+          campaign_id?: string
+          campaign_type?: string
+          clicked_at?: string | null
+          contact_id?: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       contact_timeline: {
         Row: {
           contact_id: string
@@ -287,6 +335,111 @@ export type Database = {
           },
         ]
       }
+      email_campaigns: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          from_email: string
+          from_name: string
+          id: string
+          name: string
+          org_id: string
+          scheduled_at: string | null
+          sent_at: string | null
+          settings: Json | null
+          statistics: Json | null
+          status: string
+          subject: string
+          target_filter: Json | null
+          target_type: string
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          from_email: string
+          from_name: string
+          id?: string
+          name: string
+          org_id: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          settings?: Json | null
+          statistics?: Json | null
+          status?: string
+          subject: string
+          target_filter?: Json | null
+          target_type?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          from_email?: string
+          from_name?: string
+          id?: string
+          name?: string
+          org_id?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          settings?: Json | null
+          statistics?: Json | null
+          status?: string
+          subject?: string
+          target_filter?: Json | null
+          target_type?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_templates: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          name: string
+          org_id: string
+          subject: string
+          updated_at: string
+          variables: string[] | null
+        }
+        Insert: {
+          category?: string
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          name: string
+          org_id: string
+          subject: string
+          updated_at?: string
+          variables?: string[] | null
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          org_id?: string
+          subject?: string
+          updated_at?: string
+          variables?: string[] | null
+        }
+        Relationships: []
+      }
       invitations: {
         Row: {
           accepted_at: string | null
@@ -502,6 +655,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lead_scoring_rules: {
+        Row: {
+          condition_config: Json | null
+          condition_type: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          org_id: string
+          points: number
+          updated_at: string
+        }
+        Insert: {
+          condition_config?: Json | null
+          condition_type: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          org_id: string
+          points?: number
+          updated_at?: string
+        }
+        Update: {
+          condition_config?: Json | null
+          condition_type?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          org_id?: string
+          points?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       notification_preferences: {
         Row: {
@@ -751,6 +940,60 @@ export type Database = {
           },
         ]
       }
+      sms_campaigns: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          message: string
+          name: string
+          org_id: string
+          scheduled_at: string | null
+          sender_id: string
+          sent_at: string | null
+          settings: Json | null
+          statistics: Json | null
+          status: string
+          target_filter: Json | null
+          target_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          message: string
+          name: string
+          org_id: string
+          scheduled_at?: string | null
+          sender_id: string
+          sent_at?: string | null
+          settings?: Json | null
+          statistics?: Json | null
+          status?: string
+          target_filter?: Json | null
+          target_type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          message?: string
+          name?: string
+          org_id?: string
+          scheduled_at?: string | null
+          sender_id?: string
+          sent_at?: string | null
+          settings?: Json | null
+          statistics?: Json | null
+          status?: string
+          target_filter?: Json | null
+          target_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           assignee_id: string | null
@@ -845,6 +1088,87 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      workflow_executions: {
+        Row: {
+          actions_log: Json[] | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          started_at: string | null
+          status: string
+          trigger_data: Json | null
+          workflow_id: string
+        }
+        Insert: {
+          actions_log?: Json[] | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          started_at?: string | null
+          status?: string
+          trigger_data?: Json | null
+          workflow_id: string
+        }
+        Update: {
+          actions_log?: Json[] | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          started_at?: string | null
+          status?: string
+          trigger_data?: Json | null
+          workflow_id?: string
+        }
+        Relationships: []
+      }
+      workflows: {
+        Row: {
+          actions: Json[] | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          org_id: string
+          statistics: Json | null
+          trigger_config: Json | null
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          actions?: Json[] | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          org_id: string
+          statistics?: Json | null
+          trigger_config?: Json | null
+          trigger_type: string
+          updated_at?: string
+        }
+        Update: {
+          actions?: Json[] | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          org_id?: string
+          statistics?: Json | null
+          trigger_config?: Json | null
+          trigger_type?: string
+          updated_at?: string
         }
         Relationships: []
       }
