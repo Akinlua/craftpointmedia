@@ -12,10 +12,12 @@ import { getProducts, createProduct } from '@/lib/api/products';
 import { ProductFilters, CreateProductData } from '@/types/product';
 import { useToast } from '@/hooks/use-toast';
 import { can } from '@/lib/rbac/can';
+import { useCompatSession } from '@/lib/hooks/useCompatSession';
 
 export default function ProductsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useCompatSession();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [filters, setFilters] = useState<ProductFilters>({
     search: '',
@@ -60,8 +62,7 @@ export default function ProductsPage() {
   const totalProducts = productsData?.total || 0;
   const activeProducts = products.filter(p => p.active).length;
 
-  // Mock user role for RBAC
-  const userRole = 'manager';
+  const userRole = user?.role || 'staff';
 
   return (
     <div className="space-y-6">
