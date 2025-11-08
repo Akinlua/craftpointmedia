@@ -153,3 +153,69 @@ export async function bulkUpdateProducts(action: 'activate' | 'deactivate' | 'de
     if (error) throw error;
   }
 }
+
+export async function getNextSKU(prefix: string = 'PROD'): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('org_id')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile) throw new Error('Profile not found');
+
+  // Get the latest product with this prefix
+  const { data: products } = await supabase
+    .from('products')
+    .select('sku')
+    .eq('org_id', profile.org_id)
+    .ilike('sku', `${prefix}-%`)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (!products || products.length === 0) {
+    return `${prefix}-001`;
+  }
+
+  // Extract numbers from SKUs and find the highest
+  const numbers = products
+    .map(p => {
+      const match = p.sku.match(new RegExp(`${prefix}-(\\d+)`));
+      return match ? parseInt(match[1], 10) : 0;
+    })
+    .filter(n => !isNaN(n));
+
+  const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0;
+  const nextNumber = maxNumber + 1;
+
+  return `${prefix}-${nextNumber.toString().padStart(3, '0')}`;
+}
+
+export async function checkSKUExists(sku: string, excludeId?: string): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('org_id')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile) throw new Error('Profile not found');
+
+  let query = supabase
+    .from('products')
+    .select('id')
+    .eq('org_id', profile.org_id)
+    .eq('sku', sku);
+
+  if (excludeId) {
+    query = query.neq('id', excludeId);
+  }
+
+  const { data } = await query;
+
+  return (data || []).length > 0;
+}
