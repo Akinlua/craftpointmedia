@@ -37,15 +37,8 @@ import ProductsPage from "./pages/app/ProductsPage";
 import InvoicesPage from "./pages/app/InvoicesPage";
 import NewInvoicePage from "./pages/app/NewInvoicePage";
 import InvoiceDetailPage from "./pages/app/InvoiceDetailPage";
-import CampaignsPage from "./pages/app/CampaignsPage";
-import NewCampaignPage from "./pages/app/NewCampaignPage";
-import TemplatesPage from "./pages/app/TemplatesPage";
-import NewTemplatePage from "./pages/app/NewTemplatePage";
-import AutomationsPage from "./pages/app/AutomationsPage";
-import AutomationDetailPage from "./pages/app/AutomationDetailPage";
 import ReportsPage from "./pages/app/ReportsPage";
 import SalesReportPage from "./pages/app/SalesReportPage";
-import MarketingReportPage from "./pages/app/MarketingReportPage";
 import CustomerReportPage from "./pages/app/CustomerReportPage";
 
 // Agency pages
@@ -104,15 +97,8 @@ const App = () => (
               <Route path="sales/invoices" element={<InvoicesPage />} />
               <Route path="sales/invoices/new" element={<NewInvoicePage />} />
               <Route path="sales/invoices/:id" element={<InvoiceDetailPage />} />
-              <Route path="marketing/campaigns" element={<CampaignsPage />} />
-              <Route path="marketing/campaigns/new" element={<NewCampaignPage />} />
-              <Route path="marketing/templates" element={<TemplatesPage />} />
-              <Route path="marketing/templates/new" element={<NewTemplatePage />} />
-              <Route path="automations" element={<AutomationsPage />} />
-              <Route path="automations/:id" element={<AutomationDetailPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="reports/sales" element={<SalesReportPage />} />
-              <Route path="reports/marketing" element={<MarketingReportPage />} />
               <Route path="reports/customers" element={<CustomerReportPage />} />
               <Route path="agency" element={<AgencyPage />} />
               <Route path="agency/services" element={<ServicesPage />} />

@@ -1,6 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  Building2,
   LayoutDashboard,
   Users,
   Target,
@@ -9,8 +8,6 @@ import {
   BarChart3,
   Settings,
   ChevronDown,
-  Mail,
-  Zap,
   DollarSign,
   TrendingUp,
   Briefcase
@@ -57,23 +54,6 @@ const navigationItems = [
   },
 ];
 
-const marketingItems = [
-  {
-    title: "Campaigns",
-    url: "/app/marketing/campaigns",
-    icon: Mail,
-  },
-  {
-    title: "Templates",
-    url: "/app/marketing/templates",
-    icon: MessageCircle,
-  },
-  {
-    title: "Automations",
-    url: "/app/automations",
-    icon: Zap,
-  },
-];
 
 const salesItems = [
   {
@@ -98,11 +78,6 @@ const reportsItems = [
     title: "Sales Report",
     url: "/app/reports/sales",
     icon: TrendingUp,
-  },
-  {
-    title: "Marketing Report", 
-    url: "/app/reports/marketing",
-    icon: Mail,
   },
   {
     title: "Customer Report",
@@ -184,27 +159,6 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     asChild
                     className={getNavClasses(currentPath === item.url)}
-                  >
-                    <NavLink to={item.url}>
-                      <item.icon className="w-4 h-4" />
-                      {!isCollapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Marketing</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {marketingItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    className={getNavClasses(currentPath.startsWith(item.url))}
                   >
                     <NavLink to={item.url}>
                       <item.icon className="w-4 h-4" />
