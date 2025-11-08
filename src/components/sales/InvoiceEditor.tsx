@@ -3,7 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2, Search } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { contactsApi } from '@/lib/api/contacts';
+import { getProducts } from '@/lib/api/products';
+import { InvoiceLineItem } from '@/types/invoice';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface InvoiceEditorProps {
   data: any;
@@ -14,6 +20,78 @@ interface InvoiceEditorProps {
 }
 
 export function InvoiceEditor({ data, onChange, onSave, isNew, isLoading }: InvoiceEditorProps) {
+  const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
+  const [newItem, setNewItem] = useState<Partial<InvoiceLineItem>>({
+    productName: '',
+    description: '',
+    quantity: 1,
+    unitPrice: 0,
+    taxRate: 0
+  });
+
+  const { data: contactsData } = useQuery({
+    queryKey: ['contacts'],
+    queryFn: () => contactsApi.getContacts()
+  });
+
+  const { data: productsData } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => getProducts({ active: true })
+  });
+
+  const contacts = contactsData?.data || [];
+  const products = productsData?.data || [];
+
+  const addLineItem = () => {
+    if (!newItem.productName || !newItem.unitPrice) return;
+
+    const lineItem: InvoiceLineItem = {
+      id: crypto.randomUUID(),
+      productId: newItem.productId,
+      productName: newItem.productName,
+      description: newItem.description,
+      quantity: newItem.quantity || 1,
+      unitPrice: newItem.unitPrice,
+      taxRate: newItem.taxRate || 0,
+      lineTotal: (newItem.quantity || 1) * (newItem.unitPrice || 0) * (1 + (newItem.taxRate || 0) / 100)
+    };
+
+    onChange({
+      ...data,
+      lineItems: [...(data.lineItems || []), lineItem]
+    });
+
+    setNewItem({
+      productName: '',
+      description: '',
+      quantity: 1,
+      unitPrice: 0,
+      taxRate: 0
+    });
+    setIsAddItemDialogOpen(false);
+  };
+
+  const removeLineItem = (id: string) => {
+    onChange({
+      ...data,
+      lineItems: data.lineItems.filter((item: InvoiceLineItem) => item.id !== id)
+    });
+  };
+
+  const selectProduct = (productId: string) => {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      setNewItem({
+        productId: product.id,
+        productName: product.name,
+        description: product.description,
+        quantity: 1,
+        unitPrice: product.price / 100, // Convert from cents
+        taxRate: product.taxRate
+      });
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -28,9 +106,11 @@ export function InvoiceEditor({ data, onChange, onSave, isNew, isLoading }: Invo
               <SelectValue placeholder="Select a contact" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="1">John Smith</SelectItem>
-              <SelectItem value="2">Sarah Davis</SelectItem>
-              <SelectItem value="3">Mike Wilson</SelectItem>
+              {contacts.map((contact) => (
+                <SelectItem key={contact.id} value={contact.id}>
+                  {contact.firstName} {contact.lastName} - {contact.email}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -39,17 +119,144 @@ export function InvoiceEditor({ data, onChange, onSave, isNew, isLoading }: Invo
         <div>
           <div className="flex items-center justify-between mb-3">
             <label className="text-sm font-medium">Line Items</label>
-            <Button size="sm" variant="outline">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Item
-            </Button>
+            <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Item
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Line Item</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium">Select Product (Optional)</label>
+                    <Select onValueChange={selectProduct}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose from existing products" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {products.map((product) => (
+                          <SelectItem key={product.id} value={product.id}>
+                            {product.name} - ${(product.price / 100).toFixed(2)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Product/Service Name *</label>
+                    <Input
+                      value={newItem.productName}
+                      onChange={(e) => setNewItem({ ...newItem, productName: e.target.value })}
+                      placeholder="Enter name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Description</label>
+                    <Textarea
+                      value={newItem.description || ''}
+                      onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                      placeholder="Enter description"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-sm font-medium">Quantity *</label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={newItem.quantity}
+                        onChange={(e) => setNewItem({ ...newItem, quantity: parseFloat(e.target.value) })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Unit Price ($) *</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={newItem.unitPrice}
+                        onChange={(e) => setNewItem({ ...newItem, unitPrice: parseFloat(e.target.value) })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Tax Rate (%)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={newItem.taxRate}
+                        onChange={(e) => setNewItem({ ...newItem, taxRate: parseFloat(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+
+                  <Button onClick={addLineItem} className="w-full">
+                    Add to Invoice
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
           
-          <div className="border rounded-lg p-4">
-            <p className="text-sm text-muted-foreground text-center">
-              No items added yet. Click "Add Item" to get started.
-            </p>
-          </div>
+          {(!data.lineItems || data.lineItems.length === 0) ? (
+            <div className="border rounded-lg p-4">
+              <p className="text-sm text-muted-foreground text-center">
+                No items added yet. Click "Add Item" to get started.
+              </p>
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="text-left text-xs font-medium p-2">Item</th>
+                    <th className="text-right text-xs font-medium p-2">Qty</th>
+                    <th className="text-right text-xs font-medium p-2">Unit Price</th>
+                    <th className="text-right text-xs font-medium p-2">Tax</th>
+                    <th className="text-right text-xs font-medium p-2">Total</th>
+                    <th className="w-10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.lineItems.map((item: InvoiceLineItem) => (
+                    <tr key={item.id} className="border-t">
+                      <td className="p-2">
+                        <div className="font-medium text-sm">{item.productName}</div>
+                        {item.description && (
+                          <div className="text-xs text-muted-foreground">{item.description}</div>
+                        )}
+                      </td>
+                      <td className="text-right p-2 text-sm">{item.quantity}</td>
+                      <td className="text-right p-2 text-sm">${item.unitPrice.toFixed(2)}</td>
+                      <td className="text-right p-2 text-sm">{item.taxRate}%</td>
+                      <td className="text-right p-2 text-sm font-medium">
+                        ${item.lineTotal.toFixed(2)}
+                      </td>
+                      <td className="p-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => removeLineItem(item.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Terms and Notes */}
