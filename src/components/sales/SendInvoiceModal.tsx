@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -6,6 +7,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Mail, MessageSquare, Send } from 'lucide-react';
 import { Invoice } from '@/types/invoice';
+import { sendInvoice } from '@/lib/api/invoices';
+import { useToast } from '@/hooks/use-toast';
 
 interface SendInvoiceModalProps {
   invoice: Invoice;
@@ -13,18 +16,43 @@ interface SendInvoiceModalProps {
 }
 
 export function SendInvoiceModal({ invoice, onClose }: SendInvoiceModalProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [channels, setChannels] = useState<('email' | 'sms')[]>(['email']);
   const [subject, setSubject] = useState(`Invoice ${invoice.number} from Your Company`);
   const [body, setBody] = useState(`Hi ${invoice.contactName},\n\nPlease find attached invoice ${invoice.number}.\n\nThank you for your business!`);
   const [attachPdf, setAttachPdf] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSend = async () => {
-    setIsLoading(true);
-    // Simulate sending
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    onClose();
+  const sendMutation = useMutation({
+    mutationFn: sendInvoice,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoice', invoice.id] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      toast({
+        title: 'Invoice sent',
+        description: `Invoice ${invoice.number} has been sent successfully.`
+      });
+      onClose();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
+  const handleSend = () => {
+    sendMutation.mutate({
+      invoiceId: invoice.id,
+      channels,
+      template: {
+        subject,
+        body,
+        attachPdf
+      }
+    });
   };
 
   return (
@@ -128,9 +156,9 @@ export function SendInvoiceModal({ invoice, onClose }: SendInvoiceModalProps) {
         <Button variant="outline" onClick={onClose}>
           Cancel
         </Button>
-        <Button onClick={handleSend} disabled={isLoading || channels.length === 0}>
+        <Button onClick={handleSend} disabled={sendMutation.isPending || channels.length === 0}>
           <Send className="h-4 w-4 mr-2" />
-          {isLoading ? 'Sending...' : 'Send Invoice'}
+          {sendMutation.isPending ? 'Sending...' : 'Send Invoice'}
         </Button>
       </div>
     </div>

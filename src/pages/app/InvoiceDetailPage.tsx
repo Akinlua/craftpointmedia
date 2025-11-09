@@ -10,13 +10,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { InvoiceEditor } from '@/components/sales/InvoiceEditor';
 import { SendInvoiceModal } from '@/components/sales/SendInvoiceModal';
-import { getInvoice, updateInvoice, markInvoiceAsPaid, getInvoiceActivities, generateInvoicePdfUrl } from '@/lib/api/invoices';
+import { getInvoice, updateInvoice, markInvoiceAsPaid, getInvoiceActivities, generateInvoicePdfUrl, deleteInvoice } from '@/lib/api/invoices';
 import { getPaymentProviders, createCheckoutSession } from '@/lib/api/payments';
 import { UpdateInvoiceData } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils/currency';
 import { getInvoiceStatusColor } from '@/lib/utils/invoice';
 import { can } from '@/lib/rbac/can';
+import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +26,7 @@ export default function InvoiceDetailPage() {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ['invoice', id],
@@ -96,6 +98,25 @@ export default function InvoiceDetailPage() {
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteInvoice(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      toast({
+        title: 'Invoice deleted',
+        description: 'The invoice has been deleted successfully.'
+      });
+      navigate('/app/sales/invoices');
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
   const handleSave = (data: UpdateInvoiceData) => {
     updateMutation.mutate(data);
   };
@@ -120,6 +141,39 @@ export default function InvoiceDetailPage() {
       successUrl: `${window.location.origin}/app/sales/invoices/${id}/payment-success`,
       cancelUrl: `${window.location.origin}/app/sales/invoices/${id}`
     });
+  };
+
+  const handleDuplicate = async () => {
+    try {
+      const duplicateData = {
+        contactId: invoice.contactId,
+        lineItems: invoice.lineItems.map(({ id, ...item }) => item),
+        notes: invoice.notes,
+        terms: invoice.terms,
+        paymentTerms: invoice.paymentTerms,
+        dueDate: invoice.dueDate
+      };
+      
+      navigate('/app/sales/invoices/new', { state: { duplicateData } });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to duplicate invoice',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleEmailCustomer = () => {
+    if (invoice.contactEmail) {
+      window.location.href = `mailto:${invoice.contactEmail}?subject=Invoice ${invoice.number}`;
+    } else {
+      toast({
+        title: 'No email',
+        description: 'This contact does not have an email address.',
+        variant: 'destructive'
+      });
+    }
   };
 
   if (isLoading) {
@@ -238,9 +292,14 @@ export default function InvoiceDetailPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>Duplicate</DropdownMenuItem>
-              <DropdownMenuItem>Email Customer</DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDuplicate}>Duplicate</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleEmailCustomer}>Email Customer</DropdownMenuItem>
+              <DropdownMenuItem 
+                className="text-red-600"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -406,6 +465,15 @@ export default function InvoiceDetailPage() {
           )}
         </div>
       </div>
+
+      <DeleteConfirmationDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={() => deleteMutation.mutate()}
+        title="Delete Invoice"
+        description={`Are you sure you want to delete invoice ${invoice.number}? This action cannot be undone.`}
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 }

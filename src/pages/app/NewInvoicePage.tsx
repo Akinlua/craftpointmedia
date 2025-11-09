@@ -5,6 +5,8 @@ import { ArrowLeft, Save, Send, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 import { InvoiceEditor } from '@/components/sales/InvoiceEditor';
 import { createInvoice } from '@/lib/api/invoices';
 import { CreateInvoiceData } from '@/types/invoice';
@@ -23,6 +25,7 @@ export default function NewInvoicePage() {
     terms: 'Payment due within 30 days',
     paymentTerms: 30
   });
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const createMutation = useMutation({
     mutationFn: createInvoice,
@@ -93,14 +96,92 @@ export default function NewInvoicePage() {
         </div>
         
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={invoiceData.lineItems.length === 0}
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            Preview
-          </Button>
+          <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={invoiceData.lineItems.length === 0}
+              onClick={() => setIsPreviewOpen(true)}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Preview
+            </Button>
+            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Invoice Preview</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 p-6 bg-background rounded-lg border">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h2 className="text-2xl font-bold">INVOICE</h2>
+                    <p className="text-sm text-muted-foreground">Draft</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold">{formatCurrency(totals.total)}</p>
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-3">
+                  <h3 className="font-semibold">Items</h3>
+                  {invoiceData.lineItems.map((item, index) => (
+                    <div key={index} className="flex justify-between items-start p-3 bg-muted/50 rounded">
+                      <div className="flex-1">
+                        <p className="font-medium">{item.productName}</p>
+                        {item.description && (
+                          <p className="text-sm text-muted-foreground">{item.description}</p>
+                        )}
+                        <p className="text-sm text-muted-foreground">
+                          {item.quantity} × ${item.unitPrice.toFixed(2)} {item.taxRate > 0 && `(${item.taxRate}% tax)`}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">${((item.quantity * item.unitPrice) * (1 + item.taxRate / 100)).toFixed(2)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal:</span>
+                    <span>{formatCurrency(totals.subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Tax:</span>
+                    <span>{formatCurrency(totals.taxTotal)}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold text-lg pt-2 border-t">
+                    <span>Total:</span>
+                    <span>{formatCurrency(totals.total)}</span>
+                  </div>
+                </div>
+                
+                {(invoiceData.notes || invoiceData.terms) && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      {invoiceData.terms && (
+                        <div>
+                          <h4 className="text-sm font-medium">Terms:</h4>
+                          <p className="text-sm text-muted-foreground">{invoiceData.terms}</p>
+                        </div>
+                      )}
+                      {invoiceData.notes && (
+                        <div>
+                          <h4 className="text-sm font-medium">Notes:</h4>
+                          <p className="text-sm text-muted-foreground">{invoiceData.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
           
           <Button
             onClick={handleSave}
