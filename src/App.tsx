@@ -40,6 +40,7 @@ import InvoiceDetailPage from "./pages/app/InvoiceDetailPage";
 import ReportsPage from "./pages/app/ReportsPage";
 import SalesReportPage from "./pages/app/SalesReportPage";
 import CustomerReportPage from "./pages/app/CustomerReportPage";
+import MarketingReportPage from "./pages/app/MarketingReportPage";
 
 // Agency pages
 import AgencyPage from "./pages/app/AgencyPage";
@@ -100,6 +101,7 @@ const App = () => (
               <Route path="reports" element={<ReportsPage />} />
               <Route path="reports/sales" element={<SalesReportPage />} />
               <Route path="reports/customers" element={<CustomerReportPage />} />
+              <Route path="reports/marketing" element={<MarketingReportPage />} />
               <Route path="agency" element={<AgencyPage />} />
               <Route path="agency/services" element={<ServicesPage />} />
               <Route path="agency/orders" element={<OrdersPage />} />
