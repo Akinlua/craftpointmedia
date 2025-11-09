@@ -220,6 +220,5 @@ export default function MarketingPage() {
           </Link>
       </div>
     </div>
-  </div>
   );
 }

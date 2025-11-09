@@ -244,6 +244,5 @@ export default function CampaignsPage() {
           </TabsContent>
       </Tabs>
     </div>
-  </div>
   );
 }
