@@ -1,171 +1,160 @@
-import { supabase } from '@/integrations/supabase/client';
 import { TeamMember } from '@/types/org';
-
-// Helper to transform DB data to TeamMember type
-const transformTeamMember = (profile: any, userRole: any): TeamMember => ({
-  id: profile.id,
-  email: profile.email,
-  firstName: profile.first_name || '',
-  lastName: profile.last_name || '',
-  role: userRole?.role || 'staff',
-  avatar: profile.avatar_url,
-  status: profile.status || 'active',
-  lastLogin: profile.updated_at, // Use updated_at as proxy for last login
-  createdAt: profile.created_at,
-  updatedAt: profile.updated_at
-});
+import { ENV, API_ENDPOINTS } from '@/lib/config/env';
 
 export const teamApi = {
   // Get all team members in the current organization
   getTeamMembers: async (): Promise<TeamMember[]> => {
-    const { data: session } = await supabase.auth.getSession();
-    if (!session.session) throw new Error('Not authenticated');
+    const token = localStorage.getItem('AUTH_TOKEN');
+    if (!token) return [];
 
-    // Get current user's org_id
-    const { data: currentProfile } = await supabase
-      .from('profiles')
-      .select('org_id')
-      .eq('id', session.session.user.id)
-      .single();
+    try {
+      const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.USERS.BASE}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    if (!currentProfile) throw new Error('Profile not found');
+      if (!response.ok) {
+        console.error('Failed to fetch team members:', response.statusText);
+        return [];
+      }
 
-    // Get all profiles in the organization
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('org_id', currentProfile.org_id)
-      .order('created_at', { ascending: false });
+      const result = await response.json();
 
-    if (profilesError) throw profilesError;
+      // Transform API response to TeamMember type
+      // Assuming API returns { data: User[] } or just User[]
+      const users = Array.isArray(result) ? result : (result.data?.users || []);
 
-    // Get roles for all users
-    const profileIds = profiles?.map(p => p.id) || [];
-    const { data: userRoles, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('*')
-      .in('user_id', profileIds);
-
-    if (rolesError) throw rolesError;
-
-    // Combine profiles with their roles
-    const teamMembers = (profiles || []).map(profile => {
-      const userRole = userRoles?.find(r => r.user_id === profile.id);
-      return transformTeamMember(profile, userRole);
-    });
-
-    return teamMembers;
+      return users.map((user: any) => ({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName || user.first_name || '',
+        lastName: user.lastName || user.last_name || '',
+        role: user.role || 'staff',
+        avatar: user.avatar || user.avatar_url,
+        status: user.status || 'active',
+        lastLogin: user.updatedAt || user.updated_at,
+        createdAt: user.createdAt || user.created_at,
+        updatedAt: user.updatedAt || user.updated_at
+      }));
+    } catch (error) {
+      console.error('Error fetching team members:', error);
+      return [];
+    }
   },
 
   // Get pending invitations
   getPendingInvitations: async (): Promise<any[]> => {
-    const { data: session } = await supabase.auth.getSession();
-    if (!session.session) throw new Error('Not authenticated');
+    const token = localStorage.getItem('AUTH_TOKEN');
+    if (!token) throw new Error('Not authenticated');
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.AUTH.INVITATIONS}?status=pending&page=1&pageSize=10`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error('Failed to load invitations');
+    const result = await response.json();
+    const list = result.data || [];
+    return Array.isArray(list) ? list.filter((i: any) => i.status === 'pending') : [];
+  },
 
-    const { data: currentProfile } = await supabase
-      .from('profiles')
-      .select('org_id')
-      .eq('id', session.session.user.id)
-      .single();
-
-    if (!currentProfile) throw new Error('Profile not found');
-
-    const { data, error } = await supabase
-      .from('invitations')
-      .select('*')
-      .eq('org_id', currentProfile.org_id)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    return data || [];
+  cancelInvitation: async (id: string): Promise<void> => {
+    const token = localStorage.getItem('AUTH_TOKEN');
+    if (!token) throw new Error('Not authenticated');
+    const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.AUTH.CANCEL_INVITATION.replace('{id}', id)}`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error('Failed to cancel invitation');
   },
 
   // Update team member role
   updateTeamMemberRole: async (userId: string, newRole: 'owner' | 'manager' | 'staff'): Promise<TeamMember> => {
-    const { data: session } = await supabase.auth.getSession();
-    if (!session.session) throw new Error('Not authenticated');
+    const token = localStorage.getItem('AUTH_TOKEN');
+    if (!token) throw new Error('Not authenticated');
 
-    // Check if user_role exists
-    const { data: existingRole } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.USERS.BASE}/${userId}/role`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ role: newRole })
+    });
 
-    if (existingRole) {
-      // Update existing role
-      const { error: updateError } = await supabase
-        .from('user_roles')
-        .update({ role: newRole })
-        .eq('user_id', userId);
+    if (!response.ok) throw new Error('Failed to update team member role');
 
-      if (updateError) throw updateError;
-    } else {
-      // Insert new role
-      const { error: insertError } = await supabase
-        .from('user_roles')
-        .insert({ user_id: userId, role: newRole });
-
-      if (insertError) throw insertError;
-    }
-
-    // Fetch updated profile and role
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    if (profileError) throw profileError;
-
-    const { data: userRole } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    return transformTeamMember(profile, userRole);
+    const user = await response.json();
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName || user.first_name || '',
+      lastName: user.lastName || user.last_name || '',
+      role: user.role || 'staff',
+      avatar: user.avatar || user.avatar_url,
+      status: user.status || 'active',
+      lastLogin: user.updatedAt || user.updated_at,
+      createdAt: user.createdAt || user.created_at,
+      updatedAt: user.updatedAt || user.updated_at
+    };
   },
 
   // Deactivate team member
   deactivateTeamMember: async (userId: string): Promise<TeamMember> => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({ status: 'inactive' })
-      .eq('id', userId)
-      .select('*')
-      .single();
+    const token = localStorage.getItem('AUTH_TOKEN');
+    if (!token) throw new Error('Not authenticated');
 
-    if (error) throw error;
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.USERS.BASE}/${userId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ status: 'inactive' })
+    });
 
-    const { data: userRole } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
+    if (!response.ok) throw new Error('Failed to deactivate team member');
 
-    return transformTeamMember(data, userRole);
+    const user = await response.json();
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName || user.first_name || '',
+      lastName: user.lastName || user.last_name || '',
+      role: user.role || 'staff',
+      avatar: user.avatar || user.avatar_url,
+      status: user.status || 'active',
+      lastLogin: user.updatedAt || user.updated_at,
+      createdAt: user.createdAt || user.created_at,
+      updatedAt: user.updatedAt || user.updated_at
+    };
   },
 
   // Reactivate team member
   reactivateTeamMember: async (userId: string): Promise<TeamMember> => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({ status: 'active' })
-      .eq('id', userId)
-      .select('*')
-      .single();
+    const token = localStorage.getItem('AUTH_TOKEN');
+    if (!token) throw new Error('Not authenticated');
 
-    if (error) throw error;
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.USERS.BASE}/${userId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ status: 'active' })
+    });
 
-    const { data: userRole } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
+    if (!response.ok) throw new Error('Failed to reactivate team member');
 
-    return transformTeamMember(data, userRole);
+    const user = await response.json();
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName || user.first_name || '',
+      lastName: user.lastName || user.last_name || '',
+      role: user.role || 'staff',
+      avatar: user.avatar || user.avatar_url,
+      status: user.status || 'active',
+      lastLogin: user.updatedAt || user.updated_at,
+      createdAt: user.createdAt || user.created_at,
+      updatedAt: user.updatedAt || user.updated_at
+    };
   }
 };

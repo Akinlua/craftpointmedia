@@ -1,0 +1,6517 @@
+
+window.onload = function() {
+  // Build a system
+  var url = window.location.search.match(/url=([^&]+)/);
+  if (url && url.length > 1) {
+    url = decodeURIComponent(url[1]);
+  } else {
+    url = window.location.origin;
+  }
+  var options = {
+  "swaggerDoc": {
+    "openapi": "3.0.0",
+    "info": {
+      "title": "CRM API Documentation",
+      "version": "1.0.0",
+      "contact": {
+        "name": "CRM API Support",
+        "email": "api-support@example.com",
+        "url": "https://example.com"
+      },
+      "license": {
+        "name": "MIT",
+        "url": "https://opensource.org/licenses/MIT"
+      }
+    },
+    "servers": [
+      {
+        "url": "https://crm-be-deployed.onrender.com/api",
+        "description": "Development server"
+      },
+      {
+        "url": "https://staging-api.example.com",
+        "description": "Staging server"
+      },
+      {
+        "url": "https://api.example.com",
+        "description": "Production server"
+      }
+    ],
+    "components": {
+      "securitySchemes": {
+        "bearerAuth": {
+          "type": "http",
+          "scheme": "bearer",
+          "bearerFormat": "JWT",
+          "description": "JWT token obtained from login endpoint"
+        },
+        "apiKey": {
+          "type": "apiKey",
+          "in": "header",
+          "name": "X-API-Key",
+          "description": "API key for server-to-server communication"
+        }
+      },
+      "schemas": {
+        "SuccessResponse": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "example": true
+            },
+            "data": {
+              "type": "object"
+            },
+            "message": {
+              "type": "string",
+              "example": "Operation successful"
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "pagination": {
+                  "$ref": "#/components/schemas/Pagination"
+                }
+              }
+            }
+          }
+        },
+        "ErrorResponse": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "example": false
+            },
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "example": "VALIDATION_ERROR"
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Validation failed"
+                },
+                "statusCode": {
+                  "type": "integer",
+                  "example": 400
+                },
+                "details": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "Pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer",
+              "example": 1
+            },
+            "pageSize": {
+              "type": "integer",
+              "example": 25
+            },
+            "total": {
+              "type": "integer",
+              "example": 100
+            },
+            "totalPages": {
+              "type": "integer",
+              "example": 4
+            },
+            "hasNext": {
+              "type": "boolean",
+              "example": true
+            },
+            "hasPrev": {
+              "type": "boolean",
+              "example": false
+            }
+          }
+        },
+        "User": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "example": "123e4567-e89b-12d3-a456-426614174000"
+            },
+            "firstName": {
+              "type": "string",
+              "example": "John"
+            },
+            "lastName": {
+              "type": "string",
+              "example": "Doe"
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "example": "john@example.com"
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "owner",
+                "manager",
+                "staff"
+              ],
+              "example": "staff"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "inactive",
+                "pending"
+              ],
+              "example": "active"
+            },
+            "phone": {
+              "type": "string",
+              "example": "+1-555-123-4567"
+            },
+            "avatar": {
+              "type": "string",
+              "format": "uri",
+              "example": "https://example.com/avatar.jpg"
+            },
+            "timezone": {
+              "type": "string",
+              "example": "America/New_York"
+            },
+            "language": {
+              "type": "string",
+              "example": "en"
+            },
+            "lastLoginAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "Organization": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "name": {
+              "type": "string",
+              "example": "Acme Corporation"
+            },
+            "contactEmail": {
+              "type": "string",
+              "format": "email",
+              "example": "info@acme.com"
+            },
+            "contactPhone": {
+              "type": "string",
+              "example": "+1-555-123-4567"
+            },
+            "website": {
+              "type": "string",
+              "format": "uri",
+              "example": "https://acme.com"
+            },
+            "address": {
+              "type": "string",
+              "example": "123 Business Ave, City, State 12345"
+            },
+            "industry": {
+              "type": "string",
+              "example": "Technology"
+            },
+            "employeeCount": {
+              "type": "string",
+              "example": "50-100"
+            },
+            "timezone": {
+              "type": "string",
+              "example": "America/New_York"
+            },
+            "currency": {
+              "type": "string",
+              "example": "USD"
+            },
+            "logo": {
+              "type": "string",
+              "format": "uri"
+            },
+            "settings": {
+              "type": "object"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "Contact": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "firstName": {
+              "type": "string",
+              "example": "Jane"
+            },
+            "lastName": {
+              "type": "string",
+              "example": "Smith"
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "example": "jane@example.com"
+            },
+            "phone": {
+              "type": "string",
+              "example": "15551234567"
+            },
+            "company": {
+              "type": "string",
+              "example": "Smith Industries"
+            },
+            "jobTitle": {
+              "type": "string",
+              "example": "CEO"
+            },
+            "website": {
+              "type": "string",
+              "format": "uri"
+            },
+            "address": {
+              "type": "string"
+            },
+            "city": {
+              "type": "string",
+              "example": "New York"
+            },
+            "state": {
+              "type": "string",
+              "example": "NY"
+            },
+            "country": {
+              "type": "string",
+              "example": "USA"
+            },
+            "postalCode": {
+              "type": "string",
+              "example": "10001"
+            },
+            "stage": {
+              "type": "string",
+              "enum": [
+                "lead",
+                "prospect",
+                "customer",
+                "inactive"
+              ],
+              "example": "lead"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "inactive",
+                "blacklisted"
+              ],
+              "example": "active"
+            },
+            "source": {
+              "type": "string",
+              "example": "website"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "leadScore": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "example": 75
+            },
+            "lastContactedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "lastActivityAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "ownerId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "organizationId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "Deal": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "title": {
+              "type": "string",
+              "example": "Enterprise Software License"
+            },
+            "description": {
+              "type": "string"
+            },
+            "value": {
+              "type": "number",
+              "format": "decimal",
+              "example": 50000
+            },
+            "currency": {
+              "type": "string",
+              "example": "USD"
+            },
+            "stage": {
+              "type": "string",
+              "enum": [
+                "new",
+                "contacted",
+                "proposal",
+                "negotiation",
+                "closed_won",
+                "closed_lost"
+              ]
+            },
+            "probability": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "example": 75
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "urgent"
+              ],
+              "example": "high"
+            },
+            "expectedCloseDate": {
+              "type": "string",
+              "format": "date"
+            },
+            "actualCloseDate": {
+              "type": "string",
+              "format": "date"
+            },
+            "lastActivityAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "lostReason": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "customFields": {
+              "type": "object"
+            },
+            "ownerId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "organizationId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "stageId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "pipelineId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "contactId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "createdBy": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "Task": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "title": {
+              "type": "string",
+              "example": "Follow up with client"
+            },
+            "description": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "in_progress",
+                "completed",
+                "cancelled"
+              ],
+              "example": "pending"
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "urgent"
+              ],
+              "example": "medium"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "call",
+                "email",
+                "meeting",
+                "follow_up",
+                "demo",
+                "other"
+              ],
+              "example": "call"
+            },
+            "dueDate": {
+              "type": "string",
+              "format": "date"
+            },
+            "completedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "estimatedDuration": {
+              "type": "integer",
+              "description": "Duration in minutes",
+              "example": 30
+            },
+            "actualDuration": {
+              "type": "integer",
+              "description": "Actual duration in minutes"
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "assigneeId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "createdBy": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "organizationId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "contactId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "dealId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "relatedType": {
+              "type": "string",
+              "description": "contact | deal | other"
+            },
+            "relatedId": {
+              "type": "string"
+            },
+            "relatedTitle": {
+              "type": "string"
+            },
+            "assigneeName": {
+              "type": "string"
+            },
+            "assigneeAvatar": {
+              "type": "string"
+            },
+            "createdByName": {
+              "type": "string"
+            },
+            "orgId": {
+              "type": "string"
+            }
+          }
+        },
+        "TaskInput": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "string"
+            },
+            "dueDate": {
+              "type": "string",
+              "format": "date"
+            },
+            "relatedType": {
+              "type": "string"
+            },
+            "relatedId": {
+              "type": "string"
+            },
+            "relatedTitle": {
+              "type": "string"
+            },
+            "assigneeId": {
+              "type": "string"
+            }
+          }
+        },
+        "KPI": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "example": "contacts"
+            },
+            "label": {
+              "type": "string",
+              "example": "Total Contacts"
+            },
+            "value": {
+              "type": "string",
+              "example": "120"
+            },
+            "change": {
+              "type": "string",
+              "example": "+10%"
+            },
+            "trend": {
+              "type": "string",
+              "enum": [
+                "up",
+                "down"
+              ],
+              "example": "up"
+            },
+            "icon": {
+              "type": "string",
+              "example": "Users"
+            }
+          }
+        },
+        "Activity": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "example": "1"
+            },
+            "type": {
+              "type": "string",
+              "example": "contact_created"
+            },
+            "title": {
+              "type": "string",
+              "example": "New contact added"
+            },
+            "description": {
+              "type": "string",
+              "example": "John Smith was added to your contacts"
+            },
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "example": "2025-08-25T10:00:00Z"
+            },
+            "user": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "example": "Jane Doe"
+                },
+                "avatar": {
+                  "type": "string",
+                  "example": "JD"
+                }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "UnauthorizedError": {
+          "description": "Authentication required",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ErrorResponse"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "error": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "example": "UNAUTHORIZED"
+                          },
+                          "message": {
+                            "type": "string",
+                            "example": "Authentication required"
+                          },
+                          "statusCode": {
+                            "type": "integer",
+                            "example": 401
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "ForbiddenError": {
+          "description": "Access denied",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ErrorResponse"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "error": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "example": "FORBIDDEN"
+                          },
+                          "message": {
+                            "type": "string",
+                            "example": "Access denied"
+                          },
+                          "statusCode": {
+                            "type": "integer",
+                            "example": 403
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "NotFoundError": {
+          "description": "Resource not found",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ErrorResponse"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "error": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "example": "NOT_FOUND"
+                          },
+                          "message": {
+                            "type": "string",
+                            "example": "Resource not found"
+                          },
+                          "statusCode": {
+                            "type": "integer",
+                            "example": 404
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "ValidationError": {
+          "description": "Validation failed",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ErrorResponse"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "error": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "example": "VALIDATION_ERROR"
+                          },
+                          "message": {
+                            "type": "string",
+                            "example": "Validation failed"
+                          },
+                          "statusCode": {
+                            "type": "integer",
+                            "example": 400
+                          },
+                          "details": {
+                            "type": "object",
+                            "properties": {
+                              "fields": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "field": {
+                                      "type": "string",
+                                      "example": "email"
+                                    },
+                                    "message": {
+                                      "type": "string",
+                                      "example": "Valid email is required"
+                                    },
+                                    "value": {
+                                      "type": "string",
+                                      "example": "invalid-email"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "RateLimitError": {
+          "description": "Rate limit exceeded",
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ErrorResponse"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "error": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "example": "TOO_MANY_REQUESTS"
+                          },
+                          "message": {
+                            "type": "string",
+                            "example": "Too many requests, please try again later"
+                          },
+                          "statusCode": {
+                            "type": "integer",
+                            "example": 429
+                          },
+                          "retryAfter": {
+                            "type": "integer",
+                            "example": 60
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "parameters": {
+        "PageQuery": {
+          "name": "page",
+          "in": "query",
+          "description": "Page number for pagination",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          }
+        },
+        "PageSizeQuery": {
+          "name": "pageSize",
+          "in": "query",
+          "description": "Number of items per page",
+          "schema": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 25
+          }
+        },
+        "SearchQuery": {
+          "name": "search",
+          "in": "query",
+          "description": "Search term for filtering results",
+          "schema": {
+            "type": "string"
+          }
+        },
+        "SortByQuery": {
+          "name": "sortBy",
+          "in": "query",
+          "description": "Field to sort by",
+          "schema": {
+            "type": "string",
+            "default": "createdAt"
+          }
+        },
+        "SortOrderQuery": {
+          "name": "sortOrder",
+          "in": "query",
+          "description": "Sort order",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc"
+          }
+        }
+      }
+    },
+    "security": [
+      {
+        "bearerAuth": []
+      }
+    ],
+    "paths": {
+      "/auth/signup": {
+        "post": {
+          "summary": "Register a new organization owner",
+          "tags": [
+            "Auth"
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "firstName",
+                    "lastName",
+                    "email",
+                    "company",
+                    "password"
+                  ],
+                  "properties": {
+                    "firstName": {
+                      "type": "string",
+                      "example": "John"
+                    },
+                    "lastName": {
+                      "type": "string",
+                      "example": "Doe"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email",
+                      "example": "john@example.com"
+                    },
+                    "company": {
+                      "type": "string",
+                      "example": "Acme Inc"
+                    },
+                    "password": {
+                      "type": "string",
+                      "format": "password",
+                      "example": "secret123"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Organization and owner account created"
+            },
+            "400": {
+              "description": "Validation error or user already exists"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        }
+      },
+      "/auth/invite": {
+        "post": {
+          "summary": "Invite a user (manager/staff) to join organization",
+          "tags": [
+            "Auth"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "email",
+                    "role"
+                  ],
+                  "properties": {
+                    "email": {
+                      "type": "string",
+                      "format": "email",
+                      "example": "staff@example.com"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "manager",
+                        "staff"
+                      ],
+                      "example": "staff"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Invitation created and email sent"
+            },
+            "400": {
+              "description": "User already exists or invalid data"
+            },
+            "403": {
+              "description": "Role not allowed"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        }
+      },
+      "/auth/validate-invitation/{token}": {
+        "get": {
+          "summary": "Validate an invitation token",
+          "tags": [
+            "Auth"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "token",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Invitation is valid",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "valid": {
+                        "type": "boolean"
+                      },
+                      "invitation": {
+                        "type": "object",
+                        "properties": {
+                          "email": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string"
+                          },
+                          "organizationName": {
+                            "type": "string"
+                          },
+                          "inviterName": {
+                            "type": "string"
+                          },
+                          "expiresAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid or expired token"
+            }
+          }
+        }
+      },
+      "/auth/accept-invitation": {
+        "post": {
+          "summary": "Accept invitation and create account",
+          "tags": [
+            "Auth"
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "token",
+                    "firstName",
+                    "lastName",
+                    "password"
+                  ],
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "lastName": {
+                      "type": "string"
+                    },
+                    "password": {
+                      "type": "string",
+                      "format": "password"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Invitation accepted and account created"
+            },
+            "400": {
+              "description": "Invitation error (invalid or expired)"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        }
+      },
+      "/auth/login": {
+        "post": {
+          "summary": "Log in as an existing user",
+          "tags": [
+            "Auth"
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "email",
+                    "password"
+                  ],
+                  "properties": {
+                    "email": {
+                      "type": "string",
+                      "format": "email",
+                      "example": "john@example.com"
+                    },
+                    "password": {
+                      "type": "string",
+                      "format": "password",
+                      "example": "secret123"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful login"
+            },
+            "401": {
+              "description": "Invalid credentials"
+            },
+            "403": {
+              "description": "Account inactive"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        }
+      },
+      "/auth/invitations": {
+        "get": {
+          "summary": "Get all invitations for current organization",
+          "tags": [
+            "Auth"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "default": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "default": 10
+              }
+            },
+            {
+              "in": "query",
+              "name": "status",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "accepted",
+                  "expired",
+                  "cancelled"
+                ]
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "List of invitations",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string"
+                            },
+                            "role": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string"
+                            },
+                            "expiresAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          }
+                        }
+                      },
+                      "pagination": {
+                        "type": "object",
+                        "properties": {
+                          "page": {
+                            "type": "integer"
+                          },
+                          "pageSize": {
+                            "type": "integer"
+                          },
+                          "total": {
+                            "type": "integer"
+                          },
+                          "totalPages": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Unauthorized"
+            }
+          }
+        }
+      },
+      "/auth/invitations/{id}/cancel": {
+        "delete": {
+          "summary": "Cancel a pending invitation",
+          "tags": [
+            "Auth"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Invitation cancelled"
+            },
+            "400": {
+              "description": "Cancel error"
+            },
+            "401": {
+              "description": "Unauthorized"
+            }
+          }
+        }
+      },
+      "/auth/me": {
+        "get": {
+          "summary": "Get current user profile",
+          "tags": [
+            "Auth"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "User profile data"
+            },
+            "401": {
+              "description": "Unauthorized"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        }
+      },
+      "/auth/forgot-password": {
+        "post": {
+          "summary": "Request password reset",
+          "tags": [
+            "Auth"
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "email"
+                  ],
+                  "properties": {
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Password reset email sent"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        }
+      },
+      "/auth/reset-password": {
+        "post": {
+          "summary": "Reset password with token",
+          "tags": [
+            "Auth"
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "token",
+                    "password"
+                  ],
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "password": {
+                      "type": "string",
+                      "format": "password"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Password reset successful"
+            },
+            "400": {
+              "description": "Invalid or expired token"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        }
+      },
+      "/auth/verify-reset-token": {
+        "post": {
+          "summary": "Verify if reset token is valid (optional endpoint for frontend)",
+          "tags": [
+            "Auth"
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "token"
+                  ],
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Token is valid"
+            },
+            "400": {
+              "description": "Token is invalid or expired"
+            }
+          }
+        }
+      },
+      "/contacts": {
+        "get": {
+          "summary": "Get contacts list with filters and pagination",
+          "tags": [
+            "Contacts"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1
+              }
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 25
+              }
+            },
+            {
+              "name": "search",
+              "in": "query",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "status",
+              "in": "query",
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "lead",
+                    "prospect",
+                    "customer",
+                    "inactive"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "stage",
+              "in": "query",
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            {
+              "name": "ownerId",
+              "in": "query",
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "name": "sortBy",
+              "in": "query",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "firstName",
+                  "lastName",
+                  "email",
+                  "company",
+                  "createdAt",
+                  "lastContactedAt",
+                  "leadScore"
+                ]
+              }
+            },
+            {
+              "name": "sortOrder",
+              "in": "query",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "asc",
+                  "desc"
+                ],
+                "default": "desc"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "List of contacts",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "success": {
+                        "type": "boolean"
+                      },
+                      "data": {
+                        "type": "object",
+                        "properties": {
+                          "contacts": {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/components/schemas/Contact"
+                            }
+                          },
+                          "pagination": {
+                            "type": "object",
+                            "properties": {
+                              "page": {
+                                "type": "integer"
+                              },
+                              "limit": {
+                                "type": "integer"
+                              },
+                              "total": {
+                                "type": "integer"
+                              },
+                              "totalPages": {
+                                "type": "integer"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Create a new contact",
+          "tags": [
+            "Contacts"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Contact"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Contact created",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Contact"
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Validation error"
+            },
+            "409": {
+              "description": "Duplicate email"
+            }
+          }
+        }
+      },
+      "/contacts/{id}": {
+        "get": {
+          "summary": "Get contact by ID",
+          "tags": [
+            "Contacts"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Contact details",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Contact"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Contact not found"
+            }
+          }
+        },
+        "patch": {
+          "summary": "Update a contact",
+          "tags": [
+            "Contacts"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Contact"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Contact updated",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Contact"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Contact not found"
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete contact (soft delete)",
+          "tags": [
+            "Contacts"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Contact deleted"
+            },
+            "404": {
+              "description": "Contact not found"
+            }
+          }
+        }
+      },
+      "/contacts/bulk": {
+        "post": {
+          "summary": "Bulk operations on contacts",
+          "tags": [
+            "Contacts"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "delete",
+                        "assign",
+                        "updateStatus",
+                        "addTags",
+                        "removeTags"
+                      ]
+                    },
+                    "contactIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Bulk operation result"
+            }
+          }
+        }
+      },
+      "/contacts/{id}/timeline": {
+        "get": {
+          "summary": "Get contact timeline",
+          "tags": [
+            "Contacts"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Timeline entries"
+            }
+          }
+        }
+      },
+      "/tasks/statistics": {
+        "get": {
+          "summary": "Get task statistics for current user or team",
+          "tags": [
+            "Tasks"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "scope",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "personal",
+                  "team"
+                ],
+                "default": "personal"
+              }
+            },
+            {
+              "in": "query",
+              "name": "period",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "week",
+                  "month",
+                  "quarter"
+                ],
+                "default": "month"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Task statistics summary",
+              "content": {
+                "application/json": {
+                  "example": {
+                    "scope": "personal",
+                    "period": "month",
+                    "summary": {
+                      "totalTasks": 45,
+                      "completedTasks": 38,
+                      "overdueTasks": 3,
+                      "completionRate": 0.84,
+                      "averageCompletionTime": 2.3,
+                      "onTimeCompletion": 0.89
+                    },
+                    "byPriority": [
+                      {
+                        "priority": "urgent",
+                        "total": 5,
+                        "completed": 4,
+                        "overdue": 1
+                      }
+                    ],
+                    "byStatus": [
+                      {
+                        "status": "completed",
+                        "count": 38,
+                        "percentage": 0.84
+                      }
+                    ],
+                    "completionTrend": [
+                      {
+                        "date": "2024-01-01",
+                        "completed": 5
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "403": {
+              "description": "Staff users cannot access team stats"
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        }
+      },
+      "/tasks/reminders": {
+        "get": {
+          "summary": "Get task reminders (upcoming/overdue tasks)",
+          "description": "Retrieve upcoming and overdue task reminders for the logged-in user. By default, it fetches tasks due in the next 7 days, but you can adjust this using the `days` query parameter (1–30). Tasks are categorized into **overdue**, **today**, and **upcoming**.\n",
+          "tags": [
+            "Tasks"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "days",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 30,
+                "default": 7
+              },
+              "description": "Number of upcoming days to look ahead for task reminders."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Task reminders retrieved successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "success": {
+                        "type": "boolean",
+                        "example": true
+                      },
+                      "data": {
+                        "type": "object",
+                        "properties": {
+                          "reminders": {
+                            "type": "object",
+                            "properties": {
+                              "overdue": {
+                                "type": "array",
+                                "description": "Tasks that are past their due date.",
+                                "items": {
+                                  "$ref": "#/components/schemas/Task"
+                                }
+                              },
+                              "today": {
+                                "type": "array",
+                                "description": "Tasks due today.",
+                                "items": {
+                                  "$ref": "#/components/schemas/Task"
+                                }
+                              },
+                              "upcoming": {
+                                "type": "array",
+                                "description": "Tasks due within the specified days (excluding today).",
+                                "items": {
+                                  "$ref": "#/components/schemas/Task"
+                                }
+                              }
+                            }
+                          },
+                          "summary": {
+                            "type": "object",
+                            "properties": {
+                              "total": {
+                                "type": "integer",
+                                "example": 12
+                              },
+                              "overdue": {
+                                "type": "integer",
+                                "example": 3
+                              },
+                              "today": {
+                                "type": "integer",
+                                "example": 2
+                              },
+                              "upcoming": {
+                                "type": "integer",
+                                "example": 7
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Validation error (invalid query params)"
+            },
+            "401": {
+              "description": "Unauthorized (missing or invalid token)"
+            }
+          }
+        }
+      },
+      "/tasks": {
+        "get": {
+          "summary": "Get all tasks (with filters & pagination)",
+          "tags": [
+            "Tasks"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "default": 1
+              },
+              "description": "Page number"
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "default": 25
+              },
+              "description": "Number of results per page"
+            },
+            {
+              "in": "query",
+              "name": "status",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Comma-separated statuses"
+            },
+            {
+              "in": "query",
+              "name": "assigneeId",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Comma-separated user IDs"
+            },
+            {
+              "in": "query",
+              "name": "relatedType",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Comma-separated related types (contact, deal, etc.)"
+            },
+            {
+              "in": "query",
+              "name": "search",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Search in title, description, relatedTitle"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "List of tasks",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/Task"
+                        }
+                      },
+                      "pagination": {
+                        "type": "object",
+                        "properties": {
+                          "page": {
+                            "type": "integer"
+                          },
+                          "pageSize": {
+                            "type": "integer"
+                          },
+                          "total": {
+                            "type": "integer"
+                          },
+                          "totalPages": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Create a new task",
+          "tags": [
+            "Tasks"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskInput"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Task created successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Task"
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        }
+      },
+      "/tasks/{id}": {
+        "get": {
+          "summary": "Get a task by ID",
+          "tags": [
+            "Tasks"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Task ID"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Task found",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Task"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Task not found"
+            }
+          }
+        },
+        "patch": {
+          "summary": "Update a task",
+          "tags": [
+            "Tasks"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskInput"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Task updated successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/Task"
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Task not found"
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete a task",
+          "tags": [
+            "Tasks"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "204": {
+              "description": "Task deleted successfully"
+            },
+            "404": {
+              "description": "Task not found"
+            }
+          }
+        }
+      },
+      "/tasks/bulk": {
+        "post": {
+          "summary": "Perform bulk operations on tasks",
+          "tags": [
+            "Tasks"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "action",
+                    "taskIds"
+                  ],
+                  "properties": {
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "complete",
+                        "reassign",
+                        "delete",
+                        "archive",
+                        "updatePriority",
+                        "updateDueDate"
+                      ]
+                    },
+                    "taskIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "assigneeId": {
+                          "type": "string"
+                        },
+                        "priority": {
+                          "type": "string",
+                          "enum": [
+                            "low",
+                            "medium",
+                            "high",
+                            "urgent"
+                          ]
+                        },
+                        "dueDate": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Bulk operation result",
+              "content": {
+                "application/json": {
+                  "example": {
+                    "message": "Bulk complete operation completed",
+                    "results": {
+                      "successful": [
+                        {
+                          "taskId": "task_1",
+                          "action": "complete",
+                          "description": "Marked as complete",
+                          "updatedAt": "2024-01-21T10:00:00Z"
+                        }
+                      ],
+                      "failed": [],
+                      "summary": {
+                        "total": 1,
+                        "successful": 1,
+                        "failed": 0
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Validation error"
+            },
+            "500": {
+              "description": "Bulk operation error"
+            }
+          }
+        }
+      },
+      "/deals": {
+        "get": {
+          "summary": "List deals (list or pipeline view)",
+          "tags": [
+            "Deals"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "view",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "list",
+                  "pipeline"
+                ],
+                "default": "list"
+              },
+              "description": "List view or pipeline (Kanban) view"
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "default": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "default": 20
+              }
+            },
+            {
+              "in": "query",
+              "name": "search",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "stage",
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "in": "query",
+              "name": "pipeline",
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "in": "query",
+              "name": "owner",
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "in": "query",
+              "name": "status",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "all",
+                  "open",
+                  "closed"
+                ],
+                "default": "all"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Deals retrieved successfully"
+            },
+            "401": {
+              "description": "Unauthorized"
+            }
+          }
+        },
+        "post": {
+          "summary": "Create a new deal",
+          "tags": [
+            "Deals"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "title"
+                  ],
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "number"
+                    },
+                    "currency": {
+                      "type": "string",
+                      "default": "USD"
+                    },
+                    "priority": {
+                      "type": "string",
+                      "enum": [
+                        "low",
+                        "medium",
+                        "high",
+                        "urgent"
+                      ],
+                      "default": "medium"
+                    },
+                    "expectedCloseDate": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "contactId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "pipelineId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "stageId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "customFields": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Deal created successfully"
+            },
+            "400": {
+              "description": "Validation error"
+            },
+            "401": {
+              "description": "Unauthorized"
+            }
+          }
+        }
+      },
+      "/deals/{id}": {
+        "get": {
+          "summary": "Get details of a deal",
+          "tags": [
+            "Deals"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Deal retrieved successfully"
+            },
+            "401": {
+              "description": "Unauthorized"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "404": {
+              "description": "Deal not found"
+            }
+          }
+        },
+        "patch": {
+          "summary": "Update an existing deal",
+          "tags": [
+            "Deals"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "number"
+                    },
+                    "stageId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "contactId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "priority": {
+                      "type": "string",
+                      "enum": [
+                        "low",
+                        "medium",
+                        "high",
+                        "urgent"
+                      ]
+                    },
+                    "expectedCloseDate": {
+                      "type": "string",
+                      "format": "date"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Deal updated successfully"
+            },
+            "400": {
+              "description": "Validation error"
+            },
+            "401": {
+              "description": "Unauthorized"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "404": {
+              "description": "Deal not found"
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete a deal",
+          "tags": [
+            "Deals"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Deal deleted successfully"
+            },
+            "401": {
+              "description": "Unauthorized"
+            },
+            "403": {
+              "description": "Forbidden"
+            },
+            "404": {
+              "description": "Deal not found"
+            }
+          }
+        }
+      },
+      "/deals/bulk": {
+        "post": {
+          "summary": "Bulk operations on deals",
+          "tags": [
+            "Deals"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "dealIds",
+                    "action"
+                  ],
+                  "properties": {
+                    "dealIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "changeStage",
+                        "assignOwner",
+                        "delete",
+                        "archive"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "stageId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "ownerId": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Bulk operation completed"
+            },
+            "400": {
+              "description": "Invalid input"
+            },
+            "401": {
+              "description": "Unauthorized"
+            }
+          }
+        }
+      },
+      "/dashboard/kpis": {
+        "get": {
+          "summary": "Get dashboard KPIs",
+          "tags": [
+            "Dashboard"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "List of KPI metrics",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/KPI"
+                    }
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        }
+      },
+      "/dashboard/activity": {
+        "get": {
+          "summary": "Get recent dashboard activity",
+          "tags": [
+            "Dashboard"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "List of recent activities",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Activity"
+                    }
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Server error"
+            }
+          }
+        }
+      },
+      "/users/stats": {
+        "get": {
+          "summary": "Get user statistics",
+          "tags": [
+            "Users"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "User statistics"
+            }
+          }
+        }
+      },
+      "/users": {
+        "get": {
+          "summary": "Get all users in organization",
+          "tags": [
+            "Users"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "default": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "default": 25
+              }
+            },
+            {
+              "in": "query",
+              "name": "search",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "role",
+              "schema": {
+                "type": "string"
+              }
+            },
+            {
+              "in": "query",
+              "name": "status",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "inactive",
+                  "all"
+                ],
+                "default": "all"
+              }
+            },
+            {
+              "in": "query",
+              "name": "sort",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "createdAt",
+                  "firstName",
+                  "lastName",
+                  "email"
+                ],
+                "default": "firstName"
+              }
+            },
+            {
+              "in": "query",
+              "name": "order",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "ASC",
+                  "DESC"
+                ],
+                "default": "ASC"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "List of users with pagination"
+            }
+          }
+        }
+      },
+      "/users/{id}": {
+        "get": {
+          "summary": "Get user by ID",
+          "tags": [
+            "Users"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "User details"
+            },
+            "404": {
+              "description": "User not found"
+            }
+          }
+        },
+        "patch": {
+          "summary": "Update user",
+          "tags": [
+            "Users"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "lastName": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string"
+                    },
+                    "phone": {
+                      "type": "string"
+                    },
+                    "jobTitle": {
+                      "type": "string"
+                    },
+                    "department": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "enum"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "User updated successfully"
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete/deactivate user",
+          "tags": [
+            "Users"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "User deleted successfully"
+            }
+          }
+        }
+      },
+      "/users/invite": {
+        "post": {
+          "summary": "Invite a new user to the organization",
+          "tags": [
+            "Users"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "email",
+                    "role"
+                  ],
+                  "properties": {
+                    "email": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string"
+                    },
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "lastName": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Invitation sent successfully"
+            }
+          }
+        }
+      },
+      "/users/invite/{token}": {
+        "get": {
+          "summary": "Get invitation details",
+          "tags": [
+            "Users"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "token",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Invitation details"
+            },
+            "404": {
+              "description": "Invalid or expired invitation"
+            }
+          }
+        }
+      },
+      "/users/invite/{token}/accept": {
+        "post": {
+          "summary": "Accept invitation and complete user setup",
+          "tags": [
+            "Users"
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "token",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "password"
+                  ],
+                  "properties": {
+                    "password": {
+                      "type": "string",
+                      "minLength": 8
+                    },
+                    "firstName": {
+                      "type": "string"
+                    },
+                    "lastName": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Invitation accepted successfully"
+            }
+          }
+        }
+      },
+      "/users/{id}/reset-password": {
+        "post": {
+          "summary": "Reset user password (admin only)",
+          "tags": [
+            "Users"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "newPassword"
+                  ],
+                  "properties": {
+                    "newPassword": {
+                      "type": "string",
+                      "minLength": 8
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Password reset successfully"
+            }
+          }
+        }
+      },
+      "/users/bulk": {
+        "post": {
+          "summary": "Perform bulk operations on users",
+          "tags": [
+            "Users"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "action",
+                    "userIds"
+                  ],
+                  "properties": {
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "activate",
+                        "deactivate",
+                        "update_role"
+                      ]
+                    },
+                    "userIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Bulk operation completed"
+            }
+          }
+        }
+      },
+      "/campaigns": {
+        "get": {
+          "summary": "Get all campaigns",
+          "tags": [
+            "Campaigns"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "status",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "scheduled",
+                  "sending",
+                  "sent",
+                  "paused",
+                  "cancelled"
+                ]
+              },
+              "description": "Filter by campaign status"
+            },
+            {
+              "in": "query",
+              "name": "type",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "email",
+                  "sms"
+                ]
+              },
+              "description": "Filter by campaign type"
+            },
+            {
+              "in": "query",
+              "name": "search",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Search in campaign name and subject"
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 25
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Campaigns retrieved successfully"
+            }
+          }
+        },
+        "post": {
+          "summary": "Create new campaign",
+          "tags": [
+            "Campaigns"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "type",
+                    "subject"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "example": "Q4 Product Launch Campaign"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "email",
+                        "sms"
+                      ],
+                      "example": "email"
+                    },
+                    "subject": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "example": "Introducing Our New Product Line"
+                    },
+                    "templateId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "example": "123e4567-e89b-12d3-a456-426614174000"
+                    },
+                    "content": {
+                      "type": "string",
+                      "example": "Check out our amazing new products..."
+                    },
+                    "htmlContent": {
+                      "type": "string",
+                      "example": "<h1>New Products Available!</h1>"
+                    },
+                    "scheduledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "example": "2024-12-25T10:00:00Z"
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": [
+                        "product-launch",
+                        "q4"
+                      ]
+                    },
+                    "settings": {
+                      "type": "object",
+                      "example": {
+                        "trackOpens": true,
+                        "trackClicks": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Campaign created successfully"
+            }
+          }
+        }
+      },
+      "/campaigns/{id}": {
+        "get": {
+          "summary": "Get campaign by ID",
+          "tags": [
+            "Campaigns"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Campaign retrieved successfully"
+            },
+            "404": {
+              "description": "Campaign not found"
+            }
+          }
+        },
+        "patch": {
+          "summary": "Update a campaign",
+          "description": "Allows updating campaign details. Sent or sending campaigns cannot be updated.",
+          "tags": [
+            "Campaigns"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Campaign ID"
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "maxLength": 200,
+                      "description": "Name of the campaign (1–200 characters)"
+                    },
+                    "subject": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "description": "Subject line of the campaign"
+                    },
+                    "content": {
+                      "type": "string",
+                      "description": "Text content of the campaign"
+                    },
+                    "htmlContent": {
+                      "type": "string",
+                      "description": "HTML content of the campaign"
+                    },
+                    "scheduledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "ISO 8601 datetime when campaign is scheduled"
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "List of tags associated with the campaign"
+                    },
+                    "settings": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "Additional settings for the campaign"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Campaign updated successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "success": {
+                        "type": "boolean",
+                        "example": true
+                      },
+                      "data": {
+                        "$ref": "#/components/schemas/Campaign"
+                      },
+                      "message": {
+                        "type": "string",
+                        "example": "Campaign updated successfully"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Validation failed or campaign cannot be updated",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "success": {
+                        "type": "boolean",
+                        "example": false
+                      },
+                      "error": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "example": "CAMPAIGN_IMMUTABLE"
+                          },
+                          "message": {
+                            "type": "string",
+                            "example": "Cannot update campaign that is sent or sending"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Campaign not found",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "success": {
+                        "type": "boolean",
+                        "example": false
+                      },
+                      "error": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "example": "CAMPAIGN_NOT_FOUND"
+                          },
+                          "message": {
+                            "type": "string",
+                            "example": "Campaign not found"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete campaign",
+          "tags": [
+            "Campaigns"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Campaign deleted successfully"
+            },
+            "400": {
+              "description": "Cannot delete sent campaign"
+            },
+            "404": {
+              "description": "Campaign not found"
+            }
+          }
+        }
+      },
+      "/campaigns/{id}/recipients": {
+        "get": {
+          "summary": "Get campaign recipients",
+          "tags": [
+            "Campaigns"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            {
+              "in": "query",
+              "name": "status",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "sent",
+                  "delivered",
+                  "opened",
+                  "clicked",
+                  "bounced",
+                  "failed"
+                ]
+              }
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 25
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Recipients retrieved successfully"
+            }
+          }
+        },
+        "post": {
+          "summary": "Add recipients to campaign",
+          "tags": [
+            "Campaigns"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "contactIds"
+                  ],
+                  "properties": {
+                    "contactIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "example": [
+                        "123e4567-e89b-12d3-a456-426614174000"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Recipients added successfully"
+            }
+          }
+        }
+      },
+      "/campaigns/{id}/send": {
+        "post": {
+          "summary": "Send campaign",
+          "tags": [
+            "Campaigns"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Campaign sent successfully"
+            },
+            "400": {
+              "description": "Campaign cannot be sent"
+            }
+          }
+        }
+      },
+      "/campaigns/{id}/pause": {
+        "post": {
+          "summary": "Pause campaign",
+          "tags": [
+            "Campaigns"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Campaign paused successfully"
+            }
+          }
+        }
+      },
+      "/campaigns/{id}/stats": {
+        "get": {
+          "summary": "Get campaign statistics",
+          "tags": [
+            "Campaigns"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Campaign statistics retrieved successfully"
+            }
+          }
+        }
+      },
+      "/templates": {
+        "get": {
+          "summary": "Get all templates",
+          "tags": [
+            "Templates"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "type",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "email",
+                  "sms",
+                  "invoice",
+                  "proposal",
+                  "contract"
+                ]
+              },
+              "description": "Filter by template type"
+            },
+            {
+              "in": "query",
+              "name": "category",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Filter by category"
+            },
+            {
+              "in": "query",
+              "name": "search",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Search in name and content"
+            },
+            {
+              "in": "query",
+              "name": "isActive",
+              "schema": {
+                "type": "boolean"
+              },
+              "description": "Filter active/inactive templates"
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 25
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Templates retrieved successfully"
+            }
+          }
+        },
+        "post": {
+          "summary": "Create new template",
+          "tags": [
+            "Templates"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "type",
+                    "content"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "example": "Welcome Email Template"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "email",
+                        "sms",
+                        "invoice",
+                        "proposal",
+                        "contract"
+                      ],
+                      "example": "email"
+                    },
+                    "subject": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "example": "Welcome to {{company_name}}"
+                    },
+                    "content": {
+                      "type": "string",
+                      "example": "Hello {{first_name}}, welcome to our platform!"
+                    },
+                    "htmlContent": {
+                      "type": "string",
+                      "example": "<h1>Welcome {{first_name}}!</h1>"
+                    },
+                    "variables": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": [
+                        "first_name",
+                        "company_name"
+                      ]
+                    },
+                    "category": {
+                      "type": "string",
+                      "maxLength": 100,
+                      "example": "onboarding"
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "example": [
+                        "welcome",
+                        "email"
+                      ]
+                    },
+                    "isDefault": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "settings": {
+                      "type": "object",
+                      "example": {
+                        "theme": "modern",
+                        "fontSize": "medium"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Template created successfully"
+            }
+          }
+        }
+      },
+      "/templates/types": {
+        "get": {
+          "summary": "Get available template types",
+          "tags": [
+            "Templates"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Template types retrieved successfully"
+            }
+          }
+        }
+      },
+      "/templates/{id}": {
+        "get": {
+          "summary": "Get template by ID",
+          "tags": [
+            "Templates"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Template retrieved successfully"
+            },
+            "404": {
+              "description": "Template not found"
+            }
+          }
+        },
+        "patch": {
+          "summary": "Update template",
+          "tags": [
+            "Templates"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "subject": {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    "content": {
+                      "type": "string"
+                    },
+                    "htmlContent": {
+                      "type": "string"
+                    },
+                    "variables": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "category": {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "isDefault": {
+                      "type": "boolean"
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "settings": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Template updated successfully"
+            },
+            "404": {
+              "description": "Template not found"
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete template",
+          "tags": [
+            "Templates"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Template deleted successfully"
+            },
+            "403": {
+              "description": "Cannot delete system template"
+            },
+            "404": {
+              "description": "Template not found"
+            }
+          }
+        }
+      },
+      "/templates/{id}/duplicate": {
+        "post": {
+          "summary": "Duplicate template",
+          "tags": [
+            "Templates"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "name"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200,
+                      "example": "Welcome Email Template - Copy"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Template duplicated successfully"
+            }
+          }
+        }
+      },
+      "/templates/{id}/use": {
+        "post": {
+          "summary": "Mark template as used (increments usage counter)",
+          "tags": [
+            "Templates"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Template usage tracked"
+            }
+          }
+        }
+      },
+      "/invoices/stats": {
+        "get": {
+          "summary": "Get invoice statistics",
+          "tags": [
+            "Invoices"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "dateFrom",
+              "schema": {
+                "type": "string",
+                "format": "date"
+              }
+            },
+            {
+              "in": "query",
+              "name": "dateTo",
+              "schema": {
+                "type": "string",
+                "format": "date"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Invoice statistics retrieved successfully"
+            }
+          }
+        }
+      },
+      "/invoices": {
+        "get": {
+          "summary": "Get all invoices with filtering and pagination",
+          "tags": [
+            "Invoices"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "status",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "sent",
+                  "paid",
+                  "overdue",
+                  "cancelled"
+                ]
+              },
+              "description": "Filter by invoice status"
+            },
+            {
+              "in": "query",
+              "name": "contactId",
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Filter by contact ID"
+            },
+            {
+              "in": "query",
+              "name": "search",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Search in invoice number or notes"
+            },
+            {
+              "in": "query",
+              "name": "dateFrom",
+              "schema": {
+                "type": "string",
+                "format": "date"
+              },
+              "description": "Filter invoices issued after this date"
+            },
+            {
+              "in": "query",
+              "name": "dateTo",
+              "schema": {
+                "type": "string",
+                "format": "date"
+              },
+              "description": "Filter invoices issued before this date"
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 25
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Invoices retrieved successfully"
+            }
+          }
+        },
+        "post": {
+          "summary": "Create new invoice",
+          "tags": [
+            "Invoices"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "contactId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "description": {
+                            "type": "string"
+                          },
+                          "quantity": {
+                            "type": "number"
+                          },
+                          "unitPrice": {
+                            "type": "number"
+                          },
+                          "taxRate": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    },
+                    "dueDate": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "notes": {
+                      "type": "string"
+                    },
+                    "terms": {
+                      "type": "string"
+                    },
+                    "paymentTerms": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Invoice created successfully"
+            }
+          }
+        }
+      },
+      "/invoices/{id}": {
+        "get": {
+          "summary": "Get invoice by ID",
+          "tags": [
+            "Invoices"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Invoice ID"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Invoice retrieved successfully"
+            },
+            "404": {
+              "description": "Invoice not found"
+            }
+          }
+        },
+        "patch": {
+          "summary": "Update invoice",
+          "tags": [
+            "Invoices"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Invoice ID"
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "contactId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "description": {
+                            "type": "string"
+                          },
+                          "quantity": {
+                            "type": "number"
+                          },
+                          "unitPrice": {
+                            "type": "number"
+                          },
+                          "taxRate": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    },
+                    "dueDate": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "notes": {
+                      "type": "string"
+                    },
+                    "terms": {
+                      "type": "string"
+                    },
+                    "paymentTerms": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "draft",
+                        "sent",
+                        "paid",
+                        "overdue",
+                        "cancelled"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Invoice updated successfully"
+            },
+            "404": {
+              "description": "Invoice not found"
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete invoice",
+          "tags": [
+            "Invoices"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Invoice ID"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Invoice deleted successfully"
+            },
+            "404": {
+              "description": "Invoice not found"
+            }
+          }
+        }
+      },
+      "/invoices/{id}/send": {
+        "post": {
+          "summary": "Send invoice to contact via email or SMS",
+          "tags": [
+            "Invoices"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Invoice ID"
+            }
+          ],
+          "requestBody": {
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "template": {
+                      "type": "object",
+                      "properties": {
+                        "email": {
+                          "type": "object",
+                          "properties": {
+                            "subject": {
+                              "type": "string",
+                              "example": "Invoice INV-2025-0001 from My Company"
+                            },
+                            "customMessage": {
+                              "type": "string",
+                              "example": "Please find your invoice attached. Payment is due by 30th Sept."
+                            }
+                          }
+                        }
+                      },
+                      "description": "Optional custom template for email"
+                    },
+                    "channels": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "email",
+                          "sms"
+                        ]
+                      },
+                      "example": [
+                        "email",
+                        "sms"
+                      ],
+                      "description": "Channels to send invoice through (default is email)"
+                    },
+                    "customMessage": {
+                      "type": "string",
+                      "example": "Thanks for your business! Please pay by next week.",
+                      "description": "Optional custom message to include"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Invoice sent successfully (may include warnings if some channels failed)"
+            },
+            "400": {
+              "description": "Failed to send invoice (no channels succeeded)"
+            },
+            "404": {
+              "description": "Invoice not found"
+            },
+            "409": {
+              "description": "Invoice already paid and cannot be resent"
+            }
+          }
+        }
+      },
+      "/invoices/{id}/payments": {
+        "post": {
+          "summary": "Record manual payment for invoice",
+          "tags": [
+            "Invoices"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "number"
+                    },
+                    "paymentMethod": {
+                      "type": "string",
+                      "enum": [
+                        "cash",
+                        "check",
+                        "credit_card",
+                        "debit_card",
+                        "bank_transfer",
+                        "paypal",
+                        "stripe",
+                        "other"
+                      ]
+                    },
+                    "paymentDate": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "reference": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Payment recorded successfully"
+            },
+            "400": {
+              "description": "Payment exceeds remaining amount"
+            }
+          }
+        },
+        "get": {
+          "summary": "Get all payments for an invoice",
+          "tags": [
+            "Invoices"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Payments retrieved successfully"
+            },
+            "404": {
+              "description": "Invoice not found"
+            }
+          }
+        }
+      },
+      "/invoices/{id}/pay": {
+        "post": {
+          "summary": "Create Stripe payment intent for invoice",
+          "tags": [
+            "Invoices"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "number"
+                    },
+                    "currency": {
+                      "type": "string",
+                      "example": "usd"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Payment intent created successfully"
+            }
+          }
+        }
+      },
+      "/invoices/webhook/stripe": {
+        "post": {
+          "summary": "Handle Stripe webhook events",
+          "tags": [
+            "Invoices"
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Webhook processed successfully"
+            },
+            "400": {
+              "description": "Webhook signature verification failed"
+            }
+          }
+        }
+      },
+      "/settings/organization": {
+        "get": {
+          "summary": "Get organization settings",
+          "tags": [
+            "Settings"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Organization settings retrieved successfully"
+            },
+            "404": {
+              "description": "Organization not found"
+            }
+          }
+        },
+        "patch": {
+          "summary": "Update organization settings",
+          "tags": [
+            "Settings"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "maxLength": 200,
+                      "example": "Acme Corporation"
+                    },
+                    "industry": {
+                      "type": "string",
+                      "maxLength": 100,
+                      "example": "Technology"
+                    },
+                    "employeeCount": {
+                      "type": "string",
+                      "enum": [
+                        "1-10",
+                        "11-50",
+                        "51-200",
+                        "201-500",
+                        "500+"
+                      ],
+                      "example": "11-50"
+                    },
+                    "website": {
+                      "type": "string",
+                      "maxLength": 200,
+                      "example": "https://acme.com"
+                    },
+                    "contactPhone": {
+                      "type": "string",
+                      "maxLength": 20,
+                      "example": "+1-555-123-4567"
+                    },
+                    "address": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "example": "123 Main St, New York, NY 10001"
+                    },
+                    "timezone": {
+                      "type": "string",
+                      "example": "America/New_York"
+                    },
+                    "currency": {
+                      "type": "string",
+                      "enum": [
+                        "USD",
+                        "EUR",
+                        "GBP",
+                        "CAD",
+                        "AUD"
+                      ],
+                      "example": "USD"
+                    },
+                    "logo": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "example": "https://example.com/logo.png"
+                    },
+                    "settings": {
+                      "type": "object",
+                      "example": {
+                        "emailNotifications": true,
+                        "smsEnabled": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Organization settings updated successfully"
+            },
+            "403": {
+              "description": "Insufficient permissions"
+            },
+            "404": {
+              "description": "Organization not found"
+            }
+          }
+        }
+      },
+      "/settings/profile": {
+        "get": {
+          "summary": "Get current user profile",
+          "tags": [
+            "Settings"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "User profile retrieved successfully"
+            },
+            "404": {
+              "description": "User not found"
+            }
+          }
+        },
+        "patch": {
+          "summary": "Update current user profile",
+          "tags": [
+            "Settings"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "firstName": {
+                      "type": "string",
+                      "maxLength": 100,
+                      "example": "John"
+                    },
+                    "lastName": {
+                      "type": "string",
+                      "maxLength": 100,
+                      "example": "Doe"
+                    },
+                    "phone": {
+                      "type": "string",
+                      "maxLength": 20,
+                      "example": "+1-555-123-4567"
+                    },
+                    "avatar": {
+                      "type": "string",
+                      "maxLength": 500,
+                      "example": "https://example.com/avatar.jpg"
+                    },
+                    "timezone": {
+                      "type": "string",
+                      "example": "America/New_York"
+                    },
+                    "language": {
+                      "type": "string",
+                      "enum": [
+                        "en",
+                        "es",
+                        "fr",
+                        "de",
+                        "pt"
+                      ],
+                      "example": "en"
+                    },
+                    "preferences": {
+                      "type": "object",
+                      "example": {
+                        "notifications": {
+                          "email": true,
+                          "push": false
+                        },
+                        "theme": "light"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "User profile updated successfully"
+            },
+            "404": {
+              "description": "User not found"
+            }
+          }
+        }
+      },
+      "/settings/password": {
+        "patch": {
+          "summary": "Change user password",
+          "tags": [
+            "Settings"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "currentPassword",
+                    "newPassword"
+                  ],
+                  "properties": {
+                    "currentPassword": {
+                      "type": "string",
+                      "example": "oldpassword123"
+                    },
+                    "newPassword": {
+                      "type": "string",
+                      "minLength": 8,
+                      "example": "newpassword123"
+                    },
+                    "confirmPassword": {
+                      "type": "string",
+                      "example": "newpassword123"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Password changed successfully"
+            },
+            "400": {
+              "description": "Invalid current password or validation error"
+            },
+            "404": {
+              "description": "User not found"
+            }
+          }
+        }
+      },
+      "/settings/team": {
+        "get": {
+          "summary": "Get team members",
+          "tags": [
+            "Settings"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Team members retrieved successfully"
+            },
+            "403": {
+              "description": "Insufficient permissions"
+            }
+          }
+        }
+      },
+      "/settings/team/{userId}": {
+        "patch": {
+          "summary": "Update team member",
+          "tags": [
+            "Settings"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "userId",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "owner",
+                        "manager",
+                        "staff"
+                      ],
+                      "example": "manager"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "inactive"
+                      ],
+                      "example": "active"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Team member updated successfully"
+            },
+            "403": {
+              "description": "Insufficient permissions"
+            },
+            "404": {
+              "description": "Team member not found"
+            }
+          }
+        },
+        "delete": {
+          "summary": "Remove team member",
+          "tags": [
+            "Settings"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "userId",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Team member removed successfully"
+            },
+            "400": {
+              "description": "Cannot remove yourself"
+            },
+            "403": {
+              "description": "Insufficient permissions"
+            },
+            "404": {
+              "description": "Team member not found"
+            }
+          }
+        }
+      },
+      "/settings/system": {
+        "get": {
+          "summary": "Get system information",
+          "tags": [
+            "Settings"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "System information retrieved successfully"
+            }
+          }
+        }
+      },
+      "/upload/avatar/user/{id}": {
+        "post": {
+          "summary": "Upload or update user avatar",
+          "tags": [
+            "Uploads"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "User ID"
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "multipart/form-data": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "avatar": {
+                      "type": "string",
+                      "format": "binary",
+                      "description": "Avatar image file"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Avatar uploaded successfully"
+            },
+            "400": {
+              "description": "No file uploaded or invalid file type"
+            },
+            "403": {
+              "description": "Access denied (user not allowed)"
+            },
+            "404": {
+              "description": "User not found"
+            }
+          }
+        }
+      },
+      "/upload/avatar/contact/{id}": {
+        "post": {
+          "summary": "Upload or update contact avatar",
+          "tags": [
+            "Uploads"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Contact ID"
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "multipart/form-data": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "avatar": {
+                      "type": "string",
+                      "format": "binary",
+                      "description": "Contact avatar image file"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Contact avatar uploaded successfully"
+            },
+            "400": {
+              "description": "No file uploaded or invalid file type"
+            },
+            "403": {
+              "description": "Access denied"
+            },
+            "404": {
+              "description": "Contact not found"
+            }
+          }
+        }
+      },
+      "/upload/logo": {
+        "post": {
+          "summary": "Upload or update organization logo",
+          "tags": [
+            "Uploads"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "multipart/form-data": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "logo": {
+                      "type": "string",
+                      "format": "binary",
+                      "description": "Organization logo file"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Logo uploaded successfully"
+            },
+            "400": {
+              "description": "No file uploaded or invalid file type"
+            },
+            "403": {
+              "description": "Access denied (only owners and managers can upload logo)"
+            },
+            "404": {
+              "description": "Organization not found"
+            }
+          }
+        }
+      },
+      "/messages": {
+        "post": {
+          "summary": "Send a new message (Email or SMS)",
+          "tags": [
+            "Messages"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "content",
+                    "recipientId"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "email",
+                        "sms"
+                      ],
+                      "description": "Type of message"
+                    },
+                    "content": {
+                      "type": "string",
+                      "description": "Message content"
+                    },
+                    "recipientId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Contact ID of the recipient"
+                    },
+                    "subject": {
+                      "type": "string",
+                      "description": "Required for email messages",
+                      "maxLength": 500
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Message sent successfully"
+            },
+            "400": {
+              "description": "Validation failed or recipient missing required fields"
+            },
+            "404": {
+              "description": "Contact not found"
+            }
+          }
+        }
+      },
+      "/messages/{id}": {
+        "get": {
+          "summary": "Get message details",
+          "tags": [
+            "Messages"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Message ID"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Message retrieved successfully"
+            },
+            "404": {
+              "description": "Message not found"
+            }
+          }
+        },
+        "patch": {
+          "summary": "Update message status (mark as read/unread)",
+          "tags": [
+            "Messages"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Message ID"
+            }
+          ],
+          "requestBody": {
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "read",
+                        "unread"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Message updated successfully"
+            },
+            "404": {
+              "description": "Message not found"
+            }
+          }
+        }
+      },
+      "/inbox/conversations": {
+        "get": {
+          "summary": "Get conversations list (Inbox)",
+          "tags": [
+            "Inbox"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1
+              },
+              "description": "Page number for pagination"
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 25
+              },
+              "description": "Number of records per page"
+            },
+            {
+              "in": "query",
+              "name": "status",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "unread",
+                  "read",
+                  "replied",
+                  "closed"
+                ]
+              },
+              "description": "Filter by conversation status"
+            },
+            {
+              "in": "query",
+              "name": "search",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Search in subject and last message preview"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Conversations retrieved successfully"
+            }
+          }
+        }
+      },
+      "/inbox/conversations/{id}": {
+        "get": {
+          "summary": "Get conversation details with messages",
+          "tags": [
+            "Inbox"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Conversation ID"
+            },
+            {
+              "in": "query",
+              "name": "messagesPage",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "messagesPageSize",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 50
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Conversation with messages retrieved successfully"
+            },
+            "404": {
+              "description": "Conversation not found"
+            }
+          }
+        }
+      },
+      "/inbox/conversations/{id}/messages": {
+        "post": {
+          "summary": "Send a message in a conversation (reply)",
+          "tags": [
+            "Inbox"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Conversation ID"
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "content"
+                  ],
+                  "properties": {
+                    "content": {
+                      "type": "string",
+                      "description": "Message content"
+                    },
+                    "subject": {
+                      "type": "string",
+                      "description": "Optional subject (required for email if conversation has no subject)",
+                      "maxLength": 500
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Message sent successfully"
+            },
+            "404": {
+              "description": "Conversation not found"
+            }
+          }
+        }
+      },
+      "/inbox/conversations/{id}/assign": {
+        "post": {
+          "summary": "Assign a conversation to a team member",
+          "tags": [
+            "Inbox"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Conversation ID"
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "assigneeId"
+                  ],
+                  "properties": {
+                    "assigneeId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "ID of the user to assign"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Conversation assigned successfully"
+            },
+            "404": {
+              "description": "Conversation or assignee not found"
+            }
+          }
+        }
+      },
+      "/inbox/conversations/{id}/tags": {
+        "patch": {
+          "summary": "Update conversation tags",
+          "tags": [
+            "Inbox"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Conversation ID"
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "tags"
+                  ],
+                  "properties": {
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "List of tags to assign to conversation"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Conversation tags updated successfully"
+            },
+            "404": {
+              "description": "Conversation not found"
+            }
+          }
+        }
+      },
+      "/products": {
+        "get": {
+          "summary": "Get products list",
+          "tags": [
+            "Products"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "description": "Page number for pagination"
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "description": "Number of records per page"
+            },
+            {
+              "in": "query",
+              "name": "search",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Search term (name, SKU, description)"
+            },
+            {
+              "in": "query",
+              "name": "category",
+              "schema": {
+                "type": "string"
+              },
+              "description": "Filter by product category"
+            },
+            {
+              "in": "query",
+              "name": "status",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "inactive"
+                ],
+                "default": "active"
+              },
+              "description": "Product status filter"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Paginated products list"
+            }
+          }
+        },
+        "post": {
+          "summary": "Create a new product",
+          "tags": [
+            "Products"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "price"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "example": "Laptop Pro 15"
+                    },
+                    "price": {
+                      "type": "number",
+                      "example": 999.99
+                    },
+                    "description": {
+                      "type": "string",
+                      "example": "High performance laptop"
+                    },
+                    "sku": {
+                      "type": "string",
+                      "example": "LTP-2025"
+                    },
+                    "category": {
+                      "type": "string",
+                      "example": "Electronics"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "inactive"
+                      ],
+                      "default": "active"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Product created successfully"
+            },
+            "400": {
+              "description": "Validation error"
+            }
+          }
+        }
+      },
+      "/products/{id}": {
+        "get": {
+          "summary": "Get product details",
+          "tags": [
+            "Products"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Product ID"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Product details retrieved successfully"
+            },
+            "404": {
+              "description": "Product not found"
+            }
+          }
+        },
+        "patch": {
+          "summary": "Update a product",
+          "tags": [
+            "Products"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Product ID"
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "price": {
+                      "type": "number"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "sku": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "inactive"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Product updated successfully"
+            },
+            "404": {
+              "description": "Product not found"
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete a product",
+          "tags": [
+            "Products"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "Product ID"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Product deleted successfully"
+            },
+            "400": {
+              "description": "Cannot delete product in use"
+            },
+            "404": {
+              "description": "Product not found"
+            }
+          }
+        }
+      },
+      "/reports/overview": {
+        "get": {
+          "summary": "Get overview KPIs and charts",
+          "tags": [
+            "Reports"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "period",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "7d",
+                  "30d",
+                  "90d",
+                  "1y"
+                ],
+                "default": "30d"
+              },
+              "description": "Time period for KPIs and charts"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Overview KPIs and charts retrieved successfully"
+            }
+          }
+        }
+      },
+      "/reports/sales": {
+        "get": {
+          "summary": "Get sales reports",
+          "tags": [
+            "Reports"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "period",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "7d",
+                  "30d",
+                  "90d",
+                  "1y"
+                ],
+                "default": "30d"
+              },
+              "description": "Time period for sales metrics"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Sales reports retrieved successfully"
+            }
+          }
+        }
+      },
+      "/reports/marketing": {
+        "get": {
+          "summary": "Get marketing reports",
+          "tags": [
+            "Reports"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "period",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "7d",
+                  "30d",
+                  "90d",
+                  "1y"
+                ],
+                "default": "30d"
+              },
+              "description": "Time period for marketing metrics"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Marketing reports retrieved successfully"
+            }
+          }
+        }
+      },
+      "/reports/customers": {
+        "get": {
+          "summary": "Get customer analytics",
+          "tags": [
+            "Reports"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "period",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "7d",
+                  "30d",
+                  "90d",
+                  "1y"
+                ],
+                "default": "30d"
+              },
+              "description": "Time period for customer analytics"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Customer analytics retrieved successfully"
+            }
+          }
+        }
+      },
+      "/reports/export": {
+        "get": {
+          "summary": "Export reports data",
+          "tags": [
+            "Reports"
+          ],
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "type",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "contacts",
+                  "deals",
+                  "invoices",
+                  "products"
+                ]
+              },
+              "description": "Type of data to export"
+            },
+            {
+              "in": "query",
+              "name": "format",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "csv",
+                  "excel"
+                ],
+                "default": "csv"
+              },
+              "description": "Export file format"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Exported file (CSV or Excel)",
+              "content": {
+                "text/csv": {
+                  "schema": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tags": [
+      {
+        "name": "Auth",
+        "description": "Authentication and user management APIs"
+      },
+      {
+        "name": "Tasks",
+        "description": "Task management"
+      },
+      {
+        "name": "Dashboard",
+        "description": "Dashboard KPIs and activity feed"
+      },
+      {
+        "name": "Users",
+        "description": "User and team management"
+      },
+      {
+        "name": "Invoices",
+        "description": "Invoice management and payments"
+      }
+    ]
+  },
+  "customOptions": {
+    "persistAuthorization": true,
+    "displayRequestDuration": true,
+    "filter": true,
+    "tryItOutEnabled": true,
+    "requestInterceptor": (req) => {
+      console.log('Swagger request:', req.method, req.url);
+      return req;
+    }
+  }
+};
+  url = options.swaggerUrl || url
+  var urls = options.swaggerUrls
+  var customOptions = options.customOptions
+  var spec1 = options.swaggerDoc
+  var swaggerOptions = {
+    spec: spec1,
+    url: url,
+    urls: urls,
+    dom_id: '#swagger-ui',
+    deepLinking: true,
+    presets: [
+      SwaggerUIBundle.presets.apis,
+      SwaggerUIStandalonePreset
+    ],
+    plugins: [
+      SwaggerUIBundle.plugins.DownloadUrl
+    ],
+    layout: "StandaloneLayout"
+  }
+  for (var attrname in customOptions) {
+    swaggerOptions[attrname] = customOptions[attrname];
+  }
+  var ui = SwaggerUIBundle(swaggerOptions)
+
+  if (customOptions.oauth) {
+    ui.initOAuth(customOptions.oauth)
+  }
+
+  if (customOptions.preauthorizeApiKey) {
+    const key = customOptions.preauthorizeApiKey.authDefinitionKey;
+    const value = customOptions.preauthorizeApiKey.apiKeyValue;
+    if (!!key && !!value) {
+      const pid = setInterval(() => {
+        const authorized = ui.preauthorizeApiKey(key, value);
+        if(!!authorized) clearInterval(pid);
+      }, 500)
+
+    }
+  }
+
+  if (customOptions.authAction) {
+    ui.authActions.authorize(customOptions.authAction)
+  }
+
+  window.ui = ui
+}

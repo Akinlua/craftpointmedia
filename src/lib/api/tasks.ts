@@ -1,244 +1,169 @@
-import type { Task, TaskFilters, CreateTaskData, UpdateTaskData } from '@/types/task';
-import { supabase } from '@/integrations/supabase/client';
-
-// Helper to transform DB task to frontend Task type
-const transformTask = (dbTask: any, assigneeProfile?: any, creatorProfile?: any, relatedInfo?: any): Task => {
-  const isOverdue = new Date(dbTask.due_date) < new Date() && dbTask.status !== 'completed';
-  
-  return {
-    id: dbTask.id,
-    title: dbTask.title,
-    description: dbTask.description,
-    status: isOverdue ? 'overdue' : dbTask.status,
-    priority: dbTask.priority,
-    dueDate: dbTask.due_date,
-    completedAt: dbTask.completed_at,
-    assigneeId: dbTask.assignee_id,
-    assigneeName: assigneeProfile ? `${assigneeProfile.first_name} ${assigneeProfile.last_name}` : 'Unassigned',
-    assigneeAvatar: assigneeProfile?.avatar_url,
-    createdBy: dbTask.created_by,
-    createdByName: creatorProfile ? `${creatorProfile.first_name} ${creatorProfile.last_name}` : 'Unknown',
-    orgId: dbTask.org_id,
-    relatedType: dbTask.related_type,
-    relatedId: dbTask.related_id,
-    relatedTitle: relatedInfo?.title,
-    reminderTime: dbTask.reminder_time,
-    reminderSent: dbTask.reminder_sent,
-    createdAt: dbTask.created_at,
-    updatedAt: dbTask.updated_at
-  };
-};
-
-// Helper to transform Task to DB format
-const transformToDb = (task: Partial<CreateTaskData | UpdateTaskData>) => {
-  const dbData: any = {
-    title: task.title,
-    description: task.description,
-    priority: task.priority,
-    assignee_id: task.assigneeId,
-    related_type: task.relatedType || null,
-    related_id: task.relatedId || null,
-    reminder_time: task.reminderTime
-  };
-
-  // Only include status if it's provided (for updates)
-  if ('status' in task && (task as UpdateTaskData).status) {
-    dbData.status = (task as UpdateTaskData).status;
-  }
-
-  // Only include completedAt if it's provided (for updates)
-  if ('completedAt' in task) {
-    dbData.completed_at = (task as UpdateTaskData).completedAt;
-  }
-
-  // Handle due_date - ensure it's in the correct format
-  if (task.dueDate) {
-    // If it's already a date string, use it; otherwise format it
-    dbData.due_date = typeof task.dueDate === 'string' 
-      ? task.dueDate 
-      : new Date(task.dueDate).toISOString().split('T')[0];
-  }
-
-  return dbData;
-};
+import type { Task, TaskFilters, CreateTaskData, UpdateTaskData, TaskStatistics, TaskReminders, PaginatedTaskResponse } from '@/types/task';
+import { ENV, API_ENDPOINTS } from '@/lib/config/env';
 
 export const tasksApi = {
   // Get tasks with filters
-  getTasks: async (filters?: TaskFilters): Promise<Task[]> => {
-    let query = supabase
-      .from('tasks')
-      .select(`
-        *,
-        assignee:profiles!assignee_id(first_name, last_name, avatar_url),
-        creator:profiles!created_by(first_name, last_name, avatar_url)
-      `);
+  getTasks: async (filters?: TaskFilters & { page?: number; pageSize?: number }): Promise<PaginatedTaskResponse> => {
+    const token = localStorage.getItem('AUTH_TOKEN');
+    if (!token) throw new Error('Not authenticated');
 
-    // Apply filters
+    const queryParams = new URLSearchParams();
+
     if (filters?.status?.length) {
-      query = query.in('status', filters.status.filter(s => s !== 'overdue'));
+      filters.status.forEach(s => queryParams.append('status', s));
     }
-
     if (filters?.assigneeId?.length) {
-      query = query.in('assignee_id', filters.assigneeId);
+      filters.assigneeId.forEach(id => queryParams.append('assigneeId', id));
     }
-
     if (filters?.relatedType?.length) {
-      query = query.in('related_type', filters.relatedType);
+      filters.relatedType.forEach(type => {
+        if (type) queryParams.append('relatedType', type);
+      });
     }
+    if (filters?.dueDateFrom) queryParams.append('dueDateFrom', filters.dueDateFrom);
+    if (filters?.dueDateTo) queryParams.append('dueDateTo', filters.dueDateTo);
+    if (filters?.search) queryParams.append('search', filters.search);
+    if (filters?.page) queryParams.append('page', filters.page.toString());
+    if (filters?.pageSize) queryParams.append('pageSize', filters.pageSize.toString());
 
-    if (filters?.dueDateFrom) {
-      query = query.gte('due_date', filters.dueDateFrom);
-    }
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.TASKS.BASE}?${queryParams.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-    if (filters?.dueDateTo) {
-      query = query.lte('due_date', filters.dueDateTo);
-    }
+    if (!response.ok) throw new Error('Failed to fetch tasks');
+    return await response.json();
+  },
 
-    if (filters?.search) {
-      query = query.ilike('title', `%${filters.search}%`);
-    }
+  // Get task statistics
+  getTaskStatistics: async (scope: 'personal' | 'team' = 'personal', period: 'week' | 'month' | 'year' = 'month'): Promise<TaskStatistics> => {
+    const token = localStorage.getItem('AUTH_TOKEN');
+    if (!token) throw new Error('Not authenticated');
 
-    query = query.order('due_date', { ascending: true });
+    const queryParams = new URLSearchParams({ scope, period });
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.TASKS.STATISTICS}?${queryParams.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-    const { data, error } = await query;
+    if (!response.ok) throw new Error('Failed to fetch task statistics');
+    return await response.json();
+  },
 
-    if (error) throw error;
+  // Get task reminders
+  getTaskReminders: async (): Promise<TaskReminders> => {
+    const token = localStorage.getItem('AUTH_TOKEN');
+    if (!token) throw new Error('Not authenticated');
 
-    // Fetch related info for tasks
-    const tasks = await Promise.all((data || []).map(async (task) => {
-      let relatedInfo = null;
-      
-      if (task.related_type === 'contact' && task.related_id) {
-        const { data: contact } = await supabase
-          .from('contacts')
-          .select('first_name, last_name')
-          .eq('id', task.related_id)
-          .maybeSingle();
-        
-        if (contact) {
-          relatedInfo = { title: `${contact.first_name} ${contact.last_name}` };
-        }
-      } else if (task.related_type === 'deal' && task.related_id) {
-        const { data: deal } = await supabase
-          .from('deals')
-          .select('title')
-          .eq('id', task.related_id)
-          .maybeSingle();
-        
-        if (deal) {
-          relatedInfo = { title: deal.title };
-        }
-      }
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.TASKS.REMINDERS}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      return transformTask(task, task.assignee, task.creator, relatedInfo);
-    }));
-
-    return tasks;
+    if (!response.ok) throw new Error('Failed to fetch task reminders');
+    return await response.json();
   },
 
   // Create task
   createTask: async (data: CreateTaskData): Promise<Task> => {
-    console.log('createTask called with data:', data);
-    
-    const { data: session } = await supabase.auth.getSession();
-    if (!session.session) throw new Error('Not authenticated');
+    const token = localStorage.getItem('AUTH_TOKEN');
+    if (!token) throw new Error('Not authenticated');
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('org_id')
-      .eq('id', session.session.user.id)
-      .single();
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.TASKS.BASE}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    });
 
-    if (!profile) throw new Error('Profile not found');
-
-    const dbTask = {
-      ...transformToDb(data),
-      org_id: profile.org_id,
-      created_by: session.session.user.id
-    };
-
-    console.log('Inserting task into database:', dbTask);
-
-    const { data: newTask, error } = await supabase
-      .from('tasks')
-      .insert(dbTask)
-      .select(`
-        *,
-        assignee:profiles!assignee_id(first_name, last_name, avatar_url),
-        creator:profiles!created_by(first_name, last_name, avatar_url)
-      `)
-      .single();
-
-    if (error) {
-      console.error('Task creation error:', error);
-      throw error;
-    }
-
-    return transformTask(newTask, newTask.assignee, newTask.creator);
+    if (!response.ok) throw new Error('Failed to create task');
+    return await response.json();
   },
 
   // Update task
   updateTask: async (id: string, data: UpdateTaskData): Promise<Task> => {
-    const dbUpdates = transformToDb(data);
+    const token = localStorage.getItem('AUTH_TOKEN');
+    if (!token) throw new Error('Not authenticated');
 
-    const { data: updatedTask, error } = await supabase
-      .from('tasks')
-      .update(dbUpdates)
-      .eq('id', id)
-      .select(`
-        *,
-        assignee:profiles!assignee_id(first_name, last_name, avatar_url),
-        creator:profiles!created_by(first_name, last_name, avatar_url)
-      `)
-      .single();
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.TASKS.BASE}/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    });
 
-    if (error) throw error;
-
-    return transformTask(updatedTask, updatedTask.assignee, updatedTask.creator);
+    if (!response.ok) throw new Error('Failed to update task');
+    return await response.json();
   },
 
   // Delete task
   deleteTask: async (id: string): Promise<void> => {
-    const { error } = await supabase
-      .from('tasks')
-      .delete()
-      .eq('id', id);
+    const token = localStorage.getItem('AUTH_TOKEN');
+    if (!token) throw new Error('Not authenticated');
 
-    if (error) throw error;
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.TASKS.BASE}/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error('Failed to delete task');
   },
 
   // Get task by ID
   getTask: async (id: string): Promise<Task | null> => {
-    const { data, error } = await supabase
-      .from('tasks')
-      .select(`
-        *,
-        assignee:profiles!assignee_id(first_name, last_name, avatar_url),
-        creator:profiles!created_by(first_name, last_name, avatar_url)
-      `)
-      .eq('id', id)
-      .maybeSingle();
+    const token = localStorage.getItem('AUTH_TOKEN');
+    if (!token) throw new Error('Not authenticated');
 
-    if (error) throw error;
-    if (!data) return null;
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.TASKS.BASE}/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-    return transformTask(data, data.assignee, data.creator);
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error('Failed to fetch task');
+    return await response.json();
   },
 
   // Get users for assignee selection
   getUsers: async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name, avatar_url')
-      .order('first_name');
+    const token = localStorage.getItem('AUTH_TOKEN');
+    if (!token) return [];
 
-    if (error) throw error;
+    try {
+      const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.USERS.BASE}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-    return (data || []).map(profile => ({
-      id: profile.id,
-      name: `${profile.first_name} ${profile.last_name}`,
-      avatar: profile.avatar_url,
-      role: 'staff' // Role would come from user_roles if needed
-    }));
+      if (!response.ok) {
+        console.error('Failed to fetch users:', response.status, response.statusText);
+        return [];
+      }
+
+      const result = await response.json();
+      console.log('getUsers response:', result);
+
+      // Handle various response formats
+      let users = [];
+      if (Array.isArray(result)) {
+        users = result;
+      } else if (result.data?.users && Array.isArray(result.data.users)) {
+        // API returns { success: true, data: { users: [...] } }
+        users = result.data.users;
+      } else if (Array.isArray(result.data)) {
+        users = result.data;
+      } else if (Array.isArray(result.users)) {
+        users = result.users;
+      }
+
+      return users.map((user: any) => ({
+        id: user.id,
+        name: `${user.firstName || user.first_name || ''} ${user.lastName || user.last_name || ''}`.trim(),
+        avatar: user.avatar || user.avatar_url,
+        role: user.role || 'staff'
+      }));
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      return [];
+    }
   }
 };

@@ -1,104 +1,106 @@
-import { supabase } from '@/integrations/supabase/client';
+import { ENV, API_ENDPOINTS } from '@/lib/config/env';
 import type { EmailTemplate, CreateTemplateData } from '@/types/campaign';
 
 const transformTemplate = (row: any): EmailTemplate => ({
   id: row.id,
-  orgId: row.org_id,
+  orgId: row.orgId || row.org_id,
   name: row.name,
   subject: row.subject,
   content: row.content,
   variables: row.variables || [],
   category: row.category,
-  isActive: row.is_active,
-  createdBy: row.created_by,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
+  isActive: row.isActive || row.is_active,
+  createdBy: row.createdBy || row.created_by,
+  createdAt: row.createdAt || row.created_at,
+  updatedAt: row.updatedAt || row.updated_at,
 });
+
+// Helper to get auth token
+const getAuthToken = () => localStorage.getItem('AUTH_TOKEN');
 
 export const templatesApi = {
   async getTemplates(category?: string): Promise<EmailTemplate[]> {
-    let query = supabase
-      .from('email_templates')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    if (category) {
-      query = query.eq('category', category);
-    }
+    const queryParams = new URLSearchParams();
+    if (category) queryParams.append('category', category);
+    // The backend docs say 'type' is optional, maybe we should default to 'email' if this is email templates?
+    // But the type definition is EmailTemplate, so let's assume type=email if needed, or just fetch all.
+    // The original code fetched from 'email_templates' table.
+    queryParams.append('type', 'email');
 
-    const { data, error } = await query;
-    if (error) throw error;
-    return data.map(transformTemplate);
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.TEMPLATES.BASE}?${queryParams.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch templates');
+
+    const result = await response.json();
+    return (result.data?.templates || []).map(transformTemplate);
   },
 
   async getTemplateById(id: string): Promise<EmailTemplate> {
-    const { data, error } = await supabase
-      .from('email_templates')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    if (error) throw error;
-    return transformTemplate(data);
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.TEMPLATES.BASE}/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch template');
+
+    const data = await response.json();
+    return transformTemplate(data.data || data);
   },
 
   async createTemplate(templateData: CreateTemplateData): Promise<EmailTemplate> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User not authenticated');
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('org_id')
-      .eq('id', user.id)
-      .single();
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.TEMPLATES.BASE}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ ...templateData, type: 'email' })
+    });
 
-    if (!profile) throw new Error('Profile not found');
+    if (!response.ok) throw new Error('Failed to create template');
 
-    const { data, error } = await supabase
-      .from('email_templates')
-      .insert({
-        org_id: profile.org_id,
-        name: templateData.name,
-        subject: templateData.subject,
-        content: templateData.content,
-        variables: templateData.variables || [],
-        category: templateData.category,
-        created_by: user.id,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return transformTemplate(data);
+    const data = await response.json();
+    return transformTemplate(data.data || data);
   },
 
   async updateTemplate(id: string, updates: Partial<CreateTemplateData>): Promise<EmailTemplate> {
-    const updateData: any = {};
-    
-    if (updates.name !== undefined) updateData.name = updates.name;
-    if (updates.subject !== undefined) updateData.subject = updates.subject;
-    if (updates.content !== undefined) updateData.content = updates.content;
-    if (updates.variables !== undefined) updateData.variables = updates.variables;
-    if (updates.category !== undefined) updateData.category = updates.category;
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    const { data, error } = await supabase
-      .from('email_templates')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.TEMPLATES.BASE}/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(updates)
+    });
 
-    if (error) throw error;
-    return transformTemplate(data);
+    if (!response.ok) throw new Error('Failed to update template');
+
+    const data = await response.json();
+    return transformTemplate(data.data || data);
   },
 
   async deleteTemplate(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('email_templates')
-      .update({ is_active: false })
-      .eq('id', id);
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    if (error) throw error;
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.TEMPLATES.BASE}/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error('Failed to delete template');
   },
 };

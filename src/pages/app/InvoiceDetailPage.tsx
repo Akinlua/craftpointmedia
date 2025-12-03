@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Edit, Send, Download, CreditCard, Check, MoreHorizontal } from 'lucide-react';
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { InvoiceEditor } from '@/components/sales/InvoiceEditor';
 import { SendInvoiceModal } from '@/components/sales/SendInvoiceModal';
-import { getInvoice, updateInvoice, markInvoiceAsPaid, getInvoiceActivities, generateInvoicePdfUrl, deleteInvoice } from '@/lib/api/invoices';
+import { getInvoice, updateInvoice, markInvoiceAsPaid, deleteInvoice } from '@/lib/api/invoices';
 import { getPaymentProviders, createCheckoutSession } from '@/lib/api/payments';
 import { UpdateInvoiceData } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,7 @@ export default function InvoiceDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [editedInvoice, setEditedInvoice] = useState<any>(null);
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ['invoice', id],
@@ -34,11 +35,12 @@ export default function InvoiceDetailPage() {
     enabled: !!id
   });
 
-  const { data: activities } = useQuery({
-    queryKey: ['invoice-activities', id],
-    queryFn: () => getInvoiceActivities(id!),
-    enabled: !!id
-  });
+  // Update edited invoice when invoice data changes or when entering edit mode
+  React.useEffect(() => {
+    if (invoice && isEditing && !editedInvoice) {
+      setEditedInvoice(invoice);
+    }
+  }, [invoice, isEditing, editedInvoice]);
 
   const { data: paymentProviders } = useQuery({
     queryKey: ['payment-providers'],
@@ -121,17 +123,13 @@ export default function InvoiceDetailPage() {
     updateMutation.mutate(data);
   };
 
-  const handleDownloadPdf = async () => {
-    try {
-      const pdfUrl = await generateInvoicePdfUrl(id!);
-      window.open(pdfUrl, '_blank');
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to generate PDF',
-        variant: 'destructive'
-      });
-    }
+  const handleDownloadPdf = () => {
+    // PDF generation not available in backend API yet
+    toast({
+      title: 'PDF Generation',
+      description: 'PDF generation is not yet available.',
+      variant: 'default'
+    });
   };
 
   const handleOnlinePayment = (provider: string) => {
@@ -153,7 +151,7 @@ export default function InvoiceDetailPage() {
         paymentTerms: invoice.paymentTerms,
         dueDate: invoice.dueDate
       };
-      
+
       navigate('/app/sales/invoices/new', { state: { duplicateData } });
     } catch (error) {
       toast({
@@ -203,7 +201,7 @@ export default function InvoiceDetailPage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Invoices
           </Button>
-          
+
           <div>
             <h1 className="text-3xl font-bold text-foreground">{invoice.number}</h1>
             <div className="flex items-center gap-2 mt-1">
@@ -216,7 +214,7 @@ export default function InvoiceDetailPage() {
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -226,7 +224,7 @@ export default function InvoiceDetailPage() {
             <Download className="h-4 w-4 mr-2" />
             PDF
           </Button>
-          
+
           {invoice.status === 'draft' && (
             <Dialog open={isSendModalOpen} onOpenChange={setIsSendModalOpen}>
               <DialogTrigger asChild>
@@ -246,7 +244,7 @@ export default function InvoiceDetailPage() {
               </DialogContent>
             </Dialog>
           )}
-          
+
           {['sent', 'overdue'].includes(invoice.status) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -273,18 +271,24 @@ export default function InvoiceDetailPage() {
               </DropdownMenuContent>
             </DropdownMenu>
           )}
-          
+
           {canEdit && (
             <Button
               variant={isEditing ? "default" : "outline"}
               size="sm"
-              onClick={() => setIsEditing(!isEditing)}
+              onClick={() => {
+                if (isEditing) {
+                  // Cancel editing - reset state
+                  setEditedInvoice(null);
+                }
+                setIsEditing(!isEditing);
+              }}
             >
               <Edit className="h-4 w-4 mr-2" />
               {isEditing ? 'Cancel' : 'Edit'}
             </Button>
           )}
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -294,7 +298,7 @@ export default function InvoiceDetailPage() {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleDuplicate}>Duplicate</DropdownMenuItem>
               <DropdownMenuItem onClick={handleEmailCustomer}>Email Customer</DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 className="text-red-600"
                 onClick={() => setIsDeleteDialogOpen(true)}
               >
@@ -310,8 +314,8 @@ export default function InvoiceDetailPage() {
         <div className="lg:col-span-2">
           {isEditing ? (
             <InvoiceEditor
-              data={invoice}
-              onChange={(data) => {}}
+              data={editedInvoice || invoice}
+              onChange={(data) => setEditedInvoice(data)}
               onSave={handleSave}
               isLoading={updateMutation.isPending}
             />
@@ -400,7 +404,7 @@ export default function InvoiceDetailPage() {
             </Card>
           )}
         </div>
-        
+
         <div className="space-y-4">
           {/* Invoice Info */}
           <Card>
@@ -437,32 +441,6 @@ export default function InvoiceDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Activity Timeline */}
-          {activities && activities.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Activity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {activities.map((activity) => (
-                    <div key={activity.id} className="flex gap-3">
-                      <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{activity.title}</p>
-                        {activity.description && (
-                          <p className="text-xs text-muted-foreground">{activity.description}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(activity.createdAt).toLocaleString()} by {activity.createdByName}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
 

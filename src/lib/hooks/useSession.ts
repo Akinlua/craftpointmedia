@@ -1,6 +1,5 @@
 import { create } from 'zustand';
-import { User as SupabaseUser } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { API_ENDPOINTS, ENV } from '../config/env';
 
 export interface Profile {
   id: string;
@@ -28,7 +27,7 @@ export interface UserRole {
 }
 
 interface SessionStore {
-  user: SupabaseUser | null;
+  user: any | null;
   profile: Profile | null;
   organization: Organization | null;
   role: UserRole | null;
@@ -52,85 +51,77 @@ export const useSession = create<SessionStore>((set, get) => ({
   initialize: async () => {
     try {
       set({ isLoading: true });
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user) {
-        set({ 
-          user: null, 
-          profile: null, 
-          organization: null, 
+      const token = localStorage.getItem('AUTH_TOKEN');
+      if (!token) {
+        set({
+          user: null,
+          profile: null,
+          organization: null,
           role: null,
           isAuthenticated: false,
-          isLoading: false 
+          isLoading: false,
         });
         return;
       }
-
-      // Fetch profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
-
-      if (profileError || !profile) {
-        console.error('Profile fetch error:', profileError);
-        set({ isLoading: false, isAuthenticated: false });
+      const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.AUTH.ME}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        set({
+          user: null,
+          profile: null,
+          organization: null,
+          role: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
         return;
       }
-
-      // Fetch organization
-      const { data: org, error: orgError } = await supabase
-        .from('organizations')
-        .select('*')
-        .eq('id', profile.org_id)
-        .single();
-
-      if (orgError || !org) {
-        console.error('Organization fetch error:', orgError);
-      }
-
-      // Fetch role
-      const { data: userRole, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .single();
-
-      if (roleError) {
-        console.error('Role fetch error:', roleError);
-      }
-
+      const raw = await response.json();
+      const userData = raw.message?.user || raw.data?.user || raw.data || raw.user || raw;
+      const mappedProfile: Profile = {
+        id: userData.id,
+        org_id: userData.organization?.id || '',
+        first_name: userData.firstName || null,
+        last_name: userData.lastName || null,
+        email: userData.email,
+        avatar_url: userData.avatar || null,
+        phone: userData.phone || null,
+        job_title: null,
+        status: userData.status === 'active' ? 'active' : 'inactive',
+      };
+      const mappedRole: UserRole = { role: userData.role };
       set({
-        user: session.user,
-        profile: profile as Profile,
-        organization: org ? (org as Organization) : null,
-        role: userRole || null,
+        user: null,
+        profile: mappedProfile,
+        organization: null,
+        role: mappedRole,
         isAuthenticated: true,
         isLoading: false,
       });
-    } catch (error) {
-      console.error('Session initialization error:', error);
+    } catch {
       set({ isLoading: false, isAuthenticated: false });
     }
   },
 
   login: async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
-
-      if (error) {
-        return { error: error.message };
+      if (!response.ok) {
+        const text = await response.text();
+        return { error: text || 'Invalid email or password' };
       }
-
-      if (data.user) {
-        await get().initialize();
+      const raw = await response.json();
+      const token = raw.message?.token || raw.data?.token || raw.token || raw.accessToken;
+      if (!token) {
+        return { error: 'Login succeeded but no token returned' };
       }
-
+      localStorage.setItem('AUTH_TOKEN', token);
+      await get().initialize();
       return {};
     } catch (error: any) {
       return { error: error.message };
@@ -138,7 +129,7 @@ export const useSession = create<SessionStore>((set, get) => ({
   },
 
   logout: async () => {
-    await supabase.auth.signOut();
+    localStorage.removeItem('AUTH_TOKEN');
     set({
       user: null,
       profile: null,
@@ -150,51 +141,20 @@ export const useSession = create<SessionStore>((set, get) => ({
   },
 
   updateProfile: async (updates: Partial<Profile>) => {
-    const { user, profile } = get();
-    if (!user || !profile) return;
-
-    const { error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', user.id);
-
-    if (!error) {
-      set({ profile: { ...profile, ...updates } });
-    }
+    const { profile } = get();
+    if (!profile) return;
+    set({ profile: { ...profile, ...updates } });
   },
 
   hasRole: (role: 'owner' | 'manager' | 'staff') => {
     const currentRole = get().role;
     if (!currentRole) return false;
-    
-    // Owner has all permissions
     if (currentRole.role === 'owner') return true;
-    
-    // Manager has manager and staff permissions
     if (currentRole.role === 'manager' && (role === 'manager' || role === 'staff')) return true;
-    
-    // Staff only has staff permissions
     return currentRole.role === role;
   },
 }));
 
-// Initialize session on app load
 if (typeof window !== 'undefined') {
   useSession.getState().initialize();
-  
-  // Listen to auth state changes
-  supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && session) {
-      useSession.getState().initialize();
-    } else if (event === 'SIGNED_OUT') {
-      useSession.setState({
-        user: null,
-        profile: null,
-        organization: null,
-        role: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
-    }
-  });
 }

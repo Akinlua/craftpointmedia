@@ -94,155 +94,156 @@ export default function CampaignsPage() {
       <PageHeader
         title="Campaigns"
         description="Manage your email and SMS campaigns"
-      >
+        actions={
           <Link to="/app/marketing/campaigns/new">
             <Button>
               <Plus className="w-4 h-4 mr-2" />
               New Campaign
             </Button>
-            </Link>
-      </PageHeader>
+          </Link>
+        }
+      />
 
       <div className="flex items-center gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search campaigns..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search campaigns..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'email' | 'sms')}>
-          <TabsList>
-            <TabsTrigger value="email">Email Campaigns</TabsTrigger>
-            <TabsTrigger value="sms">SMS Campaigns</TabsTrigger>
-          </TabsList>
+        <TabsList>
+          <TabsTrigger value="email">Email Campaigns</TabsTrigger>
+          <TabsTrigger value="sms">SMS Campaigns</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="email" className="mt-4">
-            <div className="border rounded-lg">
-              <Table>
-                <TableHeader>
+        <TabsContent value="email" className="mt-4">
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Campaign Name</TableHead>
+                  <TableHead>Subject</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Sent</TableHead>
+                  <TableHead className="text-right">Opened</TableHead>
+                  <TableHead className="text-right">Clicked</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
                   <TableRow>
-                    <TableHead>Campaign Name</TableHead>
-                    <TableHead>Subject</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Sent</TableHead>
-                    <TableHead className="text-right">Opened</TableHead>
-                    <TableHead className="text-right">Clicked</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      Loading...
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
-                        Loading...
+                ) : filteredCampaigns?.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      No campaigns found. Create your first campaign to get started.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredCampaigns?.map((campaign) => (
+                    <TableRow key={campaign.id}>
+                      <TableCell>
+                        <Link
+                          to={`/app/marketing/campaigns/${campaign.id}`}
+                          className="font-medium hover:underline"
+                        >
+                          {campaign.name}
+                        </Link>
                       </TableCell>
-                    </TableRow>
-                  ) : filteredCampaigns?.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
-                        No campaigns found. Create your first campaign to get started.
+                      <TableCell className="max-w-xs truncate">
+                        {campaign.subject}
                       </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredCampaigns?.map((campaign) => (
-                      <TableRow key={campaign.id}>
-                        <TableCell>
-                          <Link
-                            to={`/app/marketing/campaigns/${campaign.id}`}
-                            className="font-medium hover:underline"
-                          >
-                            {campaign.name}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {campaign.subject}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={statusColors[campaign.status]}>
-                            {campaign.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {campaign.statistics.sent}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {campaign.statistics.opened}
-                          {campaign.statistics.sent > 0 && (
-                            <span className="text-xs text-muted-foreground ml-1">
-                              ({((campaign.statistics.opened / campaign.statistics.sent) * 100).toFixed(1)}%)
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {campaign.statistics.clicked}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {campaign.status === 'draft' && (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    sendCampaignMutation.mutate({ id: campaign.id, type: 'email' })
-                                  }
-                                >
-                                  <Send className="h-4 w-4 mr-2" />
-                                  Send Now
-                                </DropdownMenuItem>
-                              )}
-                              {campaign.status === 'sending' && (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    pauseCampaignMutation.mutate({ id: campaign.id, type: 'email' })
-                                  }
-                                >
-                                  <Pause className="h-4 w-4 mr-2" />
-                                  Pause
-                                </DropdownMenuItem>
-                              )}
+                      <TableCell>
+                        <Badge className={statusColors[campaign.status]}>
+                          {campaign.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {campaign.statistics.sent}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {campaign.statistics.opened}
+                        {campaign.statistics.sent > 0 && (
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({((campaign.statistics.opened / campaign.statistics.sent) * 100).toFixed(1)}%)
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {campaign.statistics.clicked}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {campaign.status === 'draft' && (
                               <DropdownMenuItem
                                 onClick={() =>
-                                  duplicateCampaignMutation.mutate({ id: campaign.id, type: 'email' })
+                                  sendCampaignMutation.mutate({ id: campaign.id, type: 'email' })
                                 }
                               >
-                                <Copy className="h-4 w-4 mr-2" />
-                                Duplicate
+                                <Send className="h-4 w-4 mr-2" />
+                                Send Now
                               </DropdownMenuItem>
+                            )}
+                            {campaign.status === 'sending' && (
                               <DropdownMenuItem
                                 onClick={() =>
-                                  deleteCampaignMutation.mutate({ id: campaign.id, type: 'email' })
+                                  pauseCampaignMutation.mutate({ id: campaign.id, type: 'email' })
                                 }
-                                className="text-destructive"
                               >
-                                <Trash className="h-4 w-4 mr-2" />
-                                Delete
+                                <Pause className="h-4 w-4 mr-2" />
+                                Pause
                               </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
+                            )}
+                            <DropdownMenuItem
+                              onClick={() =>
+                                duplicateCampaignMutation.mutate({ id: campaign.id, type: 'email' })
+                              }
+                            >
+                              <Copy className="h-4 w-4 mr-2" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                deleteCampaignMutation.mutate({ id: campaign.id, type: 'email' })
+                              }
+                              className="text-destructive"
+                            >
+                              <Trash className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
 
-          <TabsContent value="sms">
-            <div className="border rounded-lg p-8 text-center">
-              <p className="text-muted-foreground">SMS campaigns coming soon</p>
-            </div>
-          </TabsContent>
+        <TabsContent value="sms">
+          <div className="border rounded-lg p-8 text-center">
+            <p className="text-muted-foreground">SMS campaigns coming soon</p>
+          </div>
+        </TabsContent>
       </Tabs>
-    </div>
+    </div >
   );
 }

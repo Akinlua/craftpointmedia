@@ -5,10 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Mail, 
-  MessageSquare, 
-  Download, 
+import {
+  Mail,
+  MessageSquare,
+  Download,
   Clock,
   CheckCircle,
   AlertCircle,
@@ -66,13 +66,21 @@ const MessageBubble: React.FC<{ message: Message }> = ({ message }) => {
   const StatusIcon = getDeliveryStatusIcon(message.metadata.deliveryStatus || 'sent');
   const isOutbound = message.type === 'outbound';
   const isScheduled = message.scheduledFor && new Date(message.scheduledFor) > new Date();
-  
-  const initials = message.fromName
+
+  const initials = (message.fromName || 'Unknown')
     .split(' ')
     .map(name => name.charAt(0))
     .join('')
     .toUpperCase()
     .slice(0, 2);
+
+  const formattedTime = React.useMemo(() => {
+    try {
+      return message.timestamp ? format(new Date(message.timestamp), 'MMM d, h:mm a') : 'Unknown time';
+    } catch (e) {
+      return 'Invalid time';
+    }
+  }, [message.timestamp]);
 
   return (
     <div className={cn('flex gap-3 mb-4', isOutbound && 'flex-row-reverse')}>
@@ -91,11 +99,11 @@ const MessageBubble: React.FC<{ message: Message }> = ({ message }) => {
         {/* Header */}
         <div className={cn('flex items-center gap-2 mb-1', isOutbound && 'flex-row-reverse')}>
           <span className="text-sm font-medium text-foreground">
-            {message.fromName}
+            {message.fromName || 'Unknown'}
           </span>
           <ChannelIcon className="h-3 w-3 text-muted-foreground" />
           <span className="text-xs text-muted-foreground">
-            {format(new Date(message.timestamp), 'MMM d, h:mm a')}
+            {formattedTime}
           </span>
           {isScheduled && (
             <Badge variant="outline" className="text-xs">

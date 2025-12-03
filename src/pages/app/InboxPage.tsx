@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import MessageThread from '@/components/inbox/MessageThread';
 import MessageComposer from '@/components/inbox/MessageComposer';
 import ContactContextPanel from '@/components/inbox/ContactContextPanel';
 import InboxFilters from '@/components/inbox/InboxFilters';
+import { ComposeMessageModal } from '@/components/inbox/ComposeMessageModal';
 import { useInboxStore } from '@/lib/stores/inboxStore';
 
 import { fetchConversations, fetchMessages, sendMessage, markAsRead } from '@/lib/api/inbox';
@@ -32,6 +33,7 @@ const InboxPage = () => {
 
   const { role } = useSession();
   const queryClient = useQueryClient();
+  const [showComposeModal, setShowComposeModal] = useState(false);
 
   // Fetch conversations
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
@@ -73,14 +75,12 @@ const InboxPage = () => {
     }
   };
 
-  const handleSendMessage = async (content: string, channel: any, scheduledFor?: string) => {
+  const handleSendMessage = async (content: string) => {
     if (!selectedConversationId) return;
-    
+
     await sendMessageMutation.mutateAsync({
       conversationId: selectedConversationId,
       content,
-      channel,
-      scheduledFor,
     });
   };
 
@@ -96,7 +96,7 @@ const InboxPage = () => {
             Unified email and SMS communications
           </p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setShowComposeModal(true)}>
           <Plus className="w-4 h-4" />
           Compose
         </Button>
@@ -141,7 +141,6 @@ const InboxPage = () => {
                   {canSendMessages && (
                     <MessageComposer
                       conversationId={selectedConversation.id}
-                      channel={selectedConversation.channel}
                       onSendMessage={handleSendMessage}
                       disabled={sendMessageMutation.isPending}
                     />
@@ -167,14 +166,20 @@ const InboxPage = () => {
               <ResizablePanel defaultSize={25} minSize={20}>
                 <ContactContextPanel
                   conversation={selectedConversation}
-                  onViewContact={() => {}}
-                  onCreateDeal={() => {}}
+                  onViewContact={() => { }}
+                  onCreateDeal={() => { }}
                 />
               </ResizablePanel>
             </>
           )}
         </ResizablePanelGroup>
       </div>
+
+      {/* Compose Modal */}
+      <ComposeMessageModal
+        open={showComposeModal}
+        onOpenChange={setShowComposeModal}
+      />
     </div>
   );
 };

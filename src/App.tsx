@@ -41,6 +41,12 @@ import ReportsPage from "./pages/app/ReportsPage";
 import SalesReportPage from "./pages/app/SalesReportPage";
 import CustomerReportPage from "./pages/app/CustomerReportPage";
 import MarketingReportPage from "./pages/app/MarketingReportPage";
+import MarketingPage from "./pages/app/MarketingPage";
+import CampaignsPage from "./pages/app/marketing/CampaignsPage";
+import NewCampaignPage from "./pages/app/marketing/NewCampaignPage";
+import CampaignDetailPage from "./pages/app/marketing/CampaignDetailPage";
+import TemplatesPage from "./pages/app/marketing/TemplatesPage";
+import NewTemplatePage from "./pages/app/marketing/NewTemplatePage";
 
 // Agency pages
 import AgencyPage from "./pages/app/AgencyPage";
@@ -62,7 +68,7 @@ const App = () => (
           <Routes>
             {/* Redirect root to login for now */}
             <Route path="/" element={<Navigate to="/auth/login" replace />} />
-            
+
             {/* Auth routes */}
             <Route path="/auth/login" element={<LoginPage />} />
             <Route path="/auth/signup" element={<SignupPage />} />
@@ -70,7 +76,7 @@ const App = () => (
             <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
             <Route path="/auth/verify-2fa" element={<Verify2FAPage />} />
             <Route path="/auth/accept-invitation" element={<AcceptInvitationPage />} />
-            
+
             {/* Protected app routes */}
             <Route path="/app" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/app/dashboard" replace />} />
@@ -98,6 +104,12 @@ const App = () => (
               <Route path="sales/invoices" element={<InvoicesPage />} />
               <Route path="sales/invoices/new" element={<NewInvoicePage />} />
               <Route path="sales/invoices/:id" element={<InvoiceDetailPage />} />
+              <Route path="marketing" element={<MarketingPage />} />
+              <Route path="marketing/campaigns" element={<CampaignsPage />} />
+              <Route path="marketing/campaigns/new" element={<NewCampaignPage />} />
+              <Route path="marketing/campaigns/:id" element={<CampaignDetailPage />} />
+              <Route path="marketing/templates" element={<TemplatesPage />} />
+              <Route path="marketing/templates/new" element={<NewTemplatePage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="reports/sales" element={<SalesReportPage />} />
               <Route path="reports/customers" element={<CustomerReportPage />} />
@@ -106,7 +118,7 @@ const App = () => (
               <Route path="agency/services" element={<ServicesPage />} />
               <Route path="agency/orders" element={<OrdersPage />} />
             </Route>
-            
+
             {/* Catch all - 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>

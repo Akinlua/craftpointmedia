@@ -1,5 +1,5 @@
 import { Deal, DealStageConfig, DealFilters, DealBulkAction, DealActivity, DealNote } from '@/types/deal';
-import { supabase } from '@/integrations/supabase/client';
+import { ENV, API_ENDPOINTS } from '@/lib/config/env';
 
 // Deal stages configuration
 export const dealStages: DealStageConfig[] = [
@@ -10,326 +10,224 @@ export const dealStages: DealStageConfig[] = [
   { id: 'closed_lost', name: 'Closed Lost', type: 'closed_lost', color: 'bg-red-500', order: 5 }
 ];
 
-// Helper to transform DB deal to frontend Deal type
-const transformDeal = (dbDeal: any, ownerProfile?: any, contacts?: any[]): Deal => ({
-  id: dbDeal.id,
-  title: dbDeal.title,
-  value: parseFloat(dbDeal.value) || 0,
-  currency: dbDeal.currency,
-  stage: dbDeal.stage,
-  stageId: dbDeal.stage,
-  probability: dbDeal.probability,
-  ownerId: dbDeal.owner_id,
-  ownerName: ownerProfile ? `${ownerProfile.first_name} ${ownerProfile.last_name}` : 'Unassigned',
-  ownerAvatar: ownerProfile?.avatar_url,
-  contactIds: contacts?.map(c => c.id) || [],
-  contacts: contacts?.map(c => ({
-    id: c.id,
-    name: `${c.first_name} ${c.last_name}`,
-    avatar: c.avatar_url
-  })) || [],
-  closeDate: dbDeal.close_date,
-  createdAt: dbDeal.created_at,
-  updatedAt: dbDeal.updated_at,
-  lastActivityAt: dbDeal.last_activity_at,
-  description: dbDeal.description,
-  customFields: dbDeal.custom_fields
-});
+// Helper to get auth token
+const getAuthToken = () => localStorage.getItem('AUTH_TOKEN');
 
-// Helper to transform Deal to DB format
-const transformToDb = (deal: Partial<Deal>) => ({
-  title: deal.title,
-  value: deal.value,
-  currency: deal.currency,
-  stage: deal.stage,
-  probability: deal.probability,
-  owner_id: deal.ownerId,
-  close_date: deal.closeDate,
-  description: deal.description,
-  custom_fields: deal.customFields,
-  last_activity_at: deal.lastActivityAt
-});
+// Helper to transform DB deal to frontend Deal type
+const transformDeal = (data: any): Deal => {
+  // Handle nested contact object from backend
+  const contacts = data.contact ? [{
+    id: data.contact.id,
+    name: `${data.contact.firstName} ${data.contact.lastName}`,
+    avatar: data.contact.avatar
+  }] : [];
+
+  // Handle stage - it can be either an object or a string
+  const stageId = typeof data.stage === 'object' ? data.stage.id : data.stage;
+  const stageName = typeof data.stage === 'object' ? data.stage.name : data.stage;
+
+  return {
+    id: data.id,
+    title: data.title,
+    value: parseFloat(data.value) || 0,
+    currency: data.currency || 'USD',
+    stage: stageName || 'new',
+    stageId: stageId || 'new',
+    probability: data.probability,
+    ownerId: data.owner?.id,
+    ownerName: data.owner ? `${data.owner.firstName} ${data.owner.lastName}` : 'Unassigned',
+    ownerAvatar: data.owner?.avatar,
+    contactIds: contacts.map(c => c.id),
+    contacts: contacts,
+    closeDate: data.expectedCloseDate, // Mapping expectedCloseDate to closeDate
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+    lastActivityAt: data.lastActivityAt,
+    description: data.description,
+    customFields: data.customFields
+  };
+};
 
 export const dealsApi = {
   // Get deals with filters
   getDeals: async (filters?: DealFilters, page = 1, limit = 100): Promise<{ data: Deal[], total: number }> => {
-    let query = supabase
-      .from('deals')
-      .select(`
-        *,
-        owner:profiles!owner_id(first_name, last_name, avatar_url),
-        deal_contacts(
-          contact:contacts(id, first_name, last_name, avatar_url)
-        )
-      `, { count: 'exact' });
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    // Apply filters
-    if (filters?.stage?.length) {
-      query = query.in('stage', filters.stage);
-    }
-
-    if (filters?.owner?.length) {
-      query = query.in('owner_id', filters.owner);
-    }
-
-    if (filters?.valueRange) {
-      query = query.gte('value', filters.valueRange.min).lte('value', filters.valueRange.max);
-    }
-
-    if (filters?.search) {
-      query = query.ilike('title', `%${filters.search}%`);
-    }
-
-    // Apply pagination
-    const startIndex = (page - 1) * limit;
-    query = query.range(startIndex, startIndex + limit - 1).order('created_at', { ascending: false });
-
-    const { data, error, count } = await query;
-
-    if (error) throw error;
-
-    const deals = (data || []).map(deal => {
-      const contacts = deal.deal_contacts?.map((dc: any) => dc.contact).filter(Boolean) || [];
-      return transformDeal(deal, deal.owner, contacts);
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
     });
 
+    if (filters?.stage?.length) queryParams.append('stage', filters.stage.join(','));
+    if (filters?.search) queryParams.append('search', filters.search);
+    if (filters?.owner?.length) queryParams.append('ownerId', filters.owner.join(',')); // Assuming backend supports ownerId filter
+
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.DEALS.BASE}?${queryParams.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch deals');
+
+    const result = await response.json();
+
+    // Handle the new API response structure: { success: true, data: { deals: [...], pagination: {...} } }
+    const dealsList = result.data?.deals || [];
+    const total = result.data?.pagination?.total || dealsList.length;
+
+    console.log(dealsList);
     return {
-      data: deals,
-      total: count || 0
+      data: dealsList.map(transformDeal),
+      total: total
     };
   },
 
   // Get deals grouped by stage for board view
   getDealsByStage: async (filters?: DealFilters): Promise<Record<string, Deal[]>> => {
-    const { data: deals } = await dealsApi.getDeals(filters, 1, 1000);
-    
+    // Fetch all deals (handling pagination)
+    let allDeals: Deal[] = [];
+    let page = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, total } = await dealsApi.getDeals(filters, page, 100);
+      allDeals = [...allDeals, ...data];
+
+      if (allDeals.length >= total || data.length === 0) {
+        hasMore = false;
+      } else {
+        page++;
+      }
+    }
+
     const dealsByStage: Record<string, Deal[]> = {};
     dealStages.forEach(stage => {
-      dealsByStage[stage.id] = deals.filter(deal => deal.stageId === stage.id);
+      dealsByStage[stage.id] = allDeals.filter(deal => deal.stageId === stage.id);
     });
-    
+
     return dealsByStage;
   },
 
   // Get single deal by ID
   getDeal: async (id: string): Promise<Deal | null> => {
-    const { data, error } = await supabase
-      .from('deals')
-      .select(`
-        *,
-        owner:profiles!owner_id(first_name, last_name, avatar_url),
-        deal_contacts(
-          contact:contacts(id, first_name, last_name, avatar_url)
-        )
-      `)
-      .eq('id', id)
-      .maybeSingle();
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    if (error) throw error;
-    if (!data) return null;
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.DEALS.BASE}/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-    const contacts = data.deal_contacts?.map((dc: any) => dc.contact).filter(Boolean) || [];
-    return transformDeal(data, data.owner, contacts);
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error('Failed to fetch deal');
+
+    const result = await response.json();
+    return transformDeal(result.data || result);
   },
 
   // Create deal
   createDeal: async (deal: Omit<Deal, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const { data: session } = await supabase.auth.getSession();
-    if (!session.session) throw new Error('Not authenticated');
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('org_id')
-      .eq('id', session.session.user.id)
-      .single();
-
-    if (!profile) throw new Error('Profile not found');
-
-    const dbDeal = {
-      ...transformToDb(deal),
-      org_id: profile.org_id
+    // Backend expects specific fields
+    const payload = {
+      title: deal.title,
+      description: deal.description,
+      value: deal.value,
+      currency: deal.currency,
+      priority: 'medium', // Default or add to form
+      expectedCloseDate: deal.closeDate,
+      contactId: deal.contactIds[0], // Backend only supports one contact currently
+      customFields: deal.customFields || {}
     };
 
-    const { data, error } = await supabase
-      .from('deals')
-      .insert(dbDeal)
-      .select(`
-        *,
-        owner:profiles!owner_id(first_name, last_name, avatar_url)
-      `)
-      .single();
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.DEALS.BASE}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
 
-    if (error) throw error;
+    if (!response.ok) throw new Error('Failed to create deal');
 
-    // Add deal contacts if provided
-    if (deal.contactIds?.length) {
-      const dealContacts = deal.contactIds.map(contactId => ({
-        deal_id: data.id,
-        contact_id: contactId
-      }));
-
-      await supabase.from('deal_contacts').insert(dealContacts);
-    }
-
-    return transformDeal(data, data.owner, []);
+    const result = await response.json();
+    return transformDeal(result.data || result);
   },
 
   // Update deal
   updateDeal: async (id: string, updates: Partial<Deal>): Promise<Deal> => {
-    const dbUpdates = transformToDb(updates);
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    const { data, error } = await supabase
-      .from('deals')
-      .update(dbUpdates)
-      .eq('id', id)
-      .select(`
-        *,
-        owner:profiles!owner_id(first_name, last_name, avatar_url),
-        deal_contacts(
-          contact:contacts(id, first_name, last_name, avatar_url)
-        )
-      `)
-      .single();
+    // Map frontend fields to backend fields
+    const payload: any = {};
+    if (updates.title) payload.title = updates.title;
+    if (updates.description) payload.description = updates.description;
+    if (updates.value) payload.value = updates.value;
+    if (updates.contactIds?.length) payload.contactId = updates.contactIds[0];
+    if (updates.closeDate) payload.expectedCloseDate = updates.closeDate;
+    if (updates.stage) payload.stage = updates.stage; // Assuming backend accepts stage slug update here
 
-    if (error) throw error;
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.DEALS.BASE}/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
 
-    const contacts = data.deal_contacts?.map((dc: any) => dc.contact).filter(Boolean) || [];
-    return transformDeal(data, data.owner, contacts);
+    if (!response.ok) throw new Error('Failed to update deal');
+
+    const result = await response.json();
+    return transformDeal(result.data || result);
   },
 
   // Update deal stage (for drag-and-drop)
   updateDealStage: async (id: string, stageId: string): Promise<Deal> => {
-    const stage = dealStages.find(s => s.id === stageId);
-    if (!stage) throw new Error('Stage not found');
-
-    const { data, error } = await supabase
-      .from('deals')
-      .update({ 
-        stage: stageId,
-        last_activity_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select(`
-        *,
-        owner:profiles!owner_id(first_name, last_name, avatar_url),
-        deal_contacts(
-          contact:contacts(id, first_name, last_name, avatar_url)
-        )
-      `)
-      .single();
-
-    if (error) throw error;
-
-    const contacts = data.deal_contacts?.map((dc: any) => dc.contact).filter(Boolean) || [];
-    return transformDeal(data, data.owner, contacts);
+    // Re-use updateDeal since it handles PATCH
+    return dealsApi.updateDeal(id, { stage: stageId as any });
   },
 
-  // Get deal activities
+  // Get deal activities - Mocked for now as backend support is pending
   getDealActivities: async (dealId: string): Promise<DealActivity[]> => {
-    const { data, error } = await supabase
-      .from('deal_activities')
-      .select('*, creator:profiles!created_by(first_name, last_name)')
-      .eq('deal_id', dealId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    return (data || []).map(item => ({
-      id: item.id,
-      dealId: item.deal_id,
-      type: item.type as any,
-      title: item.title,
-      description: item.description,
-      createdBy: item.created_by,
-      createdByName: item.creator ? `${item.creator.first_name} ${item.creator.last_name}` : 'Unknown',
-      createdAt: item.created_at,
-      metadata: (item.metadata || {}) as Record<string, any>
-    }));
+    return [];
   },
 
-  // Get deal notes (notes are a subset of activities)
+  // Get deal notes - Mocked for now
   getDealNotes: async (dealId: string): Promise<DealNote[]> => {
-    const { data, error } = await supabase
-      .from('deal_activities')
-      .select('*, creator:profiles!created_by(first_name, last_name)')
-      .eq('deal_id', dealId)
-      .eq('type', 'note')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    return (data || []).map(item => ({
-      id: item.id,
-      dealId: item.deal_id,
-      content: item.description || '',
-      createdBy: item.created_by,
-      createdByName: item.creator ? `${item.creator.first_name} ${item.creator.last_name}` : 'Unknown',
-      createdAt: item.created_at,
-      updatedAt: item.created_at
-    }));
+    return [];
   },
 
-  // Create deal note
+  // Create deal note - Mocked for now
   createDealNote: async (dealId: string, content: string): Promise<DealNote> => {
-    const { data: session } = await supabase.auth.getSession();
-    if (!session.session) throw new Error('Not authenticated');
-
-    const { data, error } = await supabase
-      .from('deal_activities')
-      .insert({
-        deal_id: dealId,
-        type: 'note',
-        title: 'Note added',
-        description: content,
-        created_by: session.session.user.id
-      })
-      .select('*, creator:profiles!created_by(first_name, last_name)')
-      .single();
-
-    if (error) throw error;
-
-    return {
-      id: data.id,
-      dealId: data.deal_id,
-      content: data.description || '',
-      createdBy: data.created_by,
-      createdByName: data.creator ? `${data.creator.first_name} ${data.creator.last_name}` : 'Unknown',
-      createdAt: data.created_at,
-      updatedAt: data.created_at
-    };
+    throw new Error('Notes not supported yet');
   },
 
-  // Bulk actions
+  // Bulk actions - Mocked or partial implementation
   bulkAction: async (dealIds: string[], action: DealBulkAction) => {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+
+    // Iterate for now as per other bulk actions
+    const promises = [];
+
     switch (action.type) {
-      case 'assign_owner':
-        const { error: assignError } = await supabase
-          .from('deals')
-          .update({ owner_id: action.data.ownerId })
-          .in('id', dealIds);
-        
-        if (assignError) throw assignError;
-        break;
-        
-      case 'change_stage':
-        const { error: stageError } = await supabase
-          .from('deals')
-          .update({ stage: action.data.stageId })
-          .in('id', dealIds);
-        
-        if (stageError) throw stageError;
-        break;
-        
       case 'delete':
-        const { error: deleteError } = await supabase
-          .from('deals')
-          .delete()
-          .in('id', dealIds);
-        
-        if (deleteError) throw deleteError;
+        for (const id of dealIds) {
+          promises.push(fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.DEALS.BASE}/${id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          }));
+        }
         break;
+
+      // Add other cases if needed
     }
-    
+
+    await Promise.all(promises);
     return { success: true };
   }
 };

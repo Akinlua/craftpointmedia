@@ -18,7 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { 
+import {
   Plus,
   Search,
   Filter,
@@ -27,7 +27,7 @@ import {
   Calendar
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Task, TaskFilters } from "@/types/task";
+import type { Task, TaskFilters, TaskReminders } from "@/types/task";
 
 interface TaskListProps {
   tasks: Task[];
@@ -40,6 +40,7 @@ interface TaskListProps {
   onToggleComplete: (taskId: string, completed: boolean) => Promise<any>;
   isLoading?: boolean;
   currentUserRole?: string;
+  reminders?: TaskReminders | null;
 }
 
 type SortField = 'dueDate' | 'title' | 'assigneeName' | 'priority' | 'status';
@@ -55,7 +56,8 @@ export function TaskList({
   onDeleteTask,
   onToggleComplete,
   isLoading,
-  currentUserRole = 'staff'
+  currentUserRole = 'staff',
+  reminders
 }: TaskListProps) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -66,22 +68,31 @@ export function TaskList({
   // Filter tasks by status for tabs
   const getTasksByStatus = (status?: string) => {
     let filteredTasks = [...tasks];
-    
+
     if (status && status !== 'all') {
       if (status === 'today') {
+        if (reminders?.data?.reminders?.today) {
+          return sortTasks(reminders.data.reminders.today);
+        }
         const today = new Date().toISOString().split('T')[0];
         filteredTasks = filteredTasks.filter(task => task.dueDate === today);
       } else if (status === 'upcoming') {
-        filteredTasks = filteredTasks.filter(task => 
+        if (reminders?.data?.reminders?.upcoming) {
+          return sortTasks(reminders.data.reminders.upcoming);
+        }
+        filteredTasks = filteredTasks.filter(task =>
           new Date(task.dueDate) > new Date() && task.status !== 'completed'
         );
       } else if (status === 'overdue') {
+        if (reminders?.data?.reminders?.overdue) {
+          return sortTasks(reminders.data.reminders.overdue);
+        }
         filteredTasks = filteredTasks.filter(task => task.status === 'overdue');
       } else {
         filteredTasks = filteredTasks.filter(task => task.status === status);
       }
     }
-    
+
     return sortTasks(filteredTasks);
   };
 
@@ -90,7 +101,7 @@ export function TaskList({
     return [...tasksToSort].sort((a, b) => {
       let aValue: any = a[sortField];
       let bValue: any = b[sortField];
-      
+
       if (sortField === 'dueDate') {
         aValue = new Date(aValue).getTime();
         bValue = new Date(bValue).getTime();
@@ -99,7 +110,7 @@ export function TaskList({
         aValue = priorityOrder[aValue as keyof typeof priorityOrder];
         bValue = priorityOrder[bValue as keyof typeof priorityOrder];
       }
-      
+
       if (sortDirection === 'asc') {
         return aValue > bValue ? 1 : -1;
       } else {
@@ -134,11 +145,21 @@ export function TaskList({
   };
 
   const getTaskCounts = () => {
+    if (reminders?.data?.summary) {
+      return {
+        all: tasks.length, // Keep using tasks.length for 'all' as it respects filters
+        today: reminders.data.summary.today,
+        upcoming: reminders.data.summary.upcoming,
+        overdue: reminders.data.summary.overdue,
+        completed: tasks.filter(task => task.status === 'completed').length, // This might need a separate count if paginated
+      };
+    }
+
     const today = new Date().toISOString().split('T')[0];
     return {
       all: tasks.length,
       today: tasks.filter(task => task.dueDate === today).length,
-      upcoming: tasks.filter(task => 
+      upcoming: tasks.filter(task =>
         new Date(task.dueDate) > new Date() && task.status !== 'completed'
       ).length,
       overdue: tasks.filter(task => task.status === 'overdue').length,
@@ -160,7 +181,7 @@ export function TaskList({
             Manage your tasks and reminders
           </p>
         </div>
-        <Button 
+        <Button
           onClick={() => setShowCreateForm(true)}
           className="btn-primary gap-2"
         >
@@ -226,12 +247,12 @@ export function TaskList({
                 className="pl-10"
               />
             </div>
-            
+
             <Select
               value={filters.assigneeId?.[0] || 'all'}
-              onValueChange={(value) => 
+              onValueChange={(value) =>
                 onFiltersChange({
-                  ...filters, 
+                  ...filters,
                   assigneeId: value === 'all' ? undefined : [value]
                 })
               }
@@ -320,7 +341,7 @@ export function TaskList({
             )}
           </TabsTrigger>
         </TabsList>
-        
+
         {['all', 'today', 'upcoming', 'overdue', 'completed'].map((tab) => (
           <TabsContent key={tab} value={tab} className="space-y-4 mt-6">
             {isLoading ? (
@@ -365,7 +386,7 @@ export function TaskList({
         users={users}
         isLoading={isLoading}
       />
-      
+
       <TaskForm
         open={!!editingTask}
         onOpenChange={(open) => !open && setEditingTask(null)}

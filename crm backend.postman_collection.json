@@ -1,0 +1,3071 @@
+{
+	"info": {
+		"_postman_id": "2894a582-4c90-4c42-b4d6-b086fccaf49e",
+		"name": "crm backend",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "21930353",
+		"_collection_link": "https://gold-space-545660.postman.co/workspace/My-Workspace~264c8d51-7e7c-4a74-825d-5f939a161337/collection/21930353-2894a582-4c90-4c42-b4d6-b086fccaf49e?action=share&source=collection_link&creator=21930353"
+	},
+	"item": [
+		{
+			"name": "Tasks",
+			"item": [
+				{
+					"name": "Get task statistics for current user or team",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tasks/statistics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tasks",
+								"statistics"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/tasks/statistics",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"tasks",
+										"statistics"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Date",
+									"value": "Sat, 22 Nov 2025 21:34:32 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "335"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "CF-RAY",
+									"value": "9a2b8d2ade63d519-LHR"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "br"
+								},
+								{
+									"key": "cross-origin-opener-policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "cross-origin-resource-policy",
+									"value": "cross-origin"
+								},
+								{
+									"key": "etag",
+									"value": "W/\"331-PVRFB9T/E6tv4EiHhLswCeFUQw8\""
+								},
+								{
+									"key": "origin-agent-cluster",
+									"value": "?1"
+								},
+								{
+									"key": "ratelimit-limit",
+									"value": "100"
+								},
+								{
+									"key": "ratelimit-policy",
+									"value": "100;w=900"
+								},
+								{
+									"key": "ratelimit-remaining",
+									"value": "97"
+								},
+								{
+									"key": "ratelimit-reset",
+									"value": "863"
+								},
+								{
+									"key": "referrer-policy",
+									"value": "strict-origin-when-cross-origin"
+								},
+								{
+									"key": "rndr-id",
+									"value": "e28eb0ed-04dc-43d0"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=31536000; includeSubDomains; preload"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Accept-Encoding"
+								},
+								{
+									"key": "vary",
+									"value": "Accept-Encoding"
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "x-dns-prefetch-control",
+									"value": "off"
+								},
+								{
+									"key": "x-download-options",
+									"value": "noopen"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "x-permitted-cross-domain-policies",
+									"value": "none"
+								},
+								{
+									"key": "x-render-origin-server",
+									"value": "Render"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "cf-cache-status",
+									"value": "DYNAMIC"
+								},
+								{
+									"key": "Server",
+									"value": "cloudflare"
+								},
+								{
+									"key": "alt-svc",
+									"value": "h3=\":443\"; ma=86400"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"scope\": \"personal\",\n    \"period\": \"month\",\n    \"summary\": {\n        \"totalTasks\": 45,\n        \"completedTasks\": 38,\n        \"overdueTasks\": 3,\n        \"completionRate\": 0.84,\n        \"averageCompletionTime\": 2.3,\n        \"onTimeCompletion\": 0.89\n    },\n    \"byPriority\": [\n        {\n            \"priority\": \"urgent\",\n            \"total\": 5,\n            \"completed\": 4,\n            \"overdue\": 1\n        },\n        {\n            \"priority\": \"high\",\n            \"total\": 12,\n            \"completed\": 10,\n            \"overdue\": 1\n        },\n        {\n            \"priority\": \"medium\",\n            \"total\": 20,\n            \"completed\": 17,\n            \"overdue\": 1\n        },\n        {\n            \"priority\": \"low\",\n            \"total\": 8,\n            \"completed\": 7,\n            \"overdue\": 0\n        }\n    ],\n    \"byStatus\": [\n        {\n            \"status\": \"completed\",\n            \"count\": 38,\n            \"percentage\": 0.84\n        },\n        {\n            \"status\": \"in_progress\",\n            \"count\": 4,\n            \"percentage\": 0.09\n        },\n        {\n            \"status\": \"pending\",\n            \"count\": 3,\n            \"percentage\": 0.07\n        }\n    ],\n    \"completionTrend\": [\n        {\n            \"date\": \"2024-01-01\",\n            \"completed\": 5\n        },\n        {\n            \"date\": \"2024-01-08\",\n            \"completed\": 8\n        },\n        {\n            \"date\": \"2024-01-15\",\n            \"completed\": 12\n        },\n        {\n            \"date\": \"2024-01-22\",\n            \"completed\": 13\n        }\n    ],\n    \"topPerformers\": null,\n    \"generatedAt\": \"2025-11-22T21:34:32.560Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "get tasks reminders",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": [
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/tasks/reminders",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"tasks",
+										"reminders"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Sat, 22 Nov 2025 21:35:06 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "95"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "CF-RAY",
+									"value": "9a2b8df96d30d519-LHR"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "br"
+								},
+								{
+									"key": "cross-origin-opener-policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "cross-origin-resource-policy",
+									"value": "cross-origin"
+								},
+								{
+									"key": "etag",
+									"value": "W/\"86-FvzLgahv2exi2SLzTtCOmLuYnG8\""
+								},
+								{
+									"key": "origin-agent-cluster",
+									"value": "?1"
+								},
+								{
+									"key": "ratelimit-limit",
+									"value": "100"
+								},
+								{
+									"key": "ratelimit-policy",
+									"value": "100;w=900"
+								},
+								{
+									"key": "ratelimit-remaining",
+									"value": "97"
+								},
+								{
+									"key": "ratelimit-reset",
+									"value": "139"
+								},
+								{
+									"key": "referrer-policy",
+									"value": "strict-origin-when-cross-origin"
+								},
+								{
+									"key": "rndr-id",
+									"value": "0fc77a0c-6f60-4493"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=31536000; includeSubDomains; preload"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Accept-Encoding"
+								},
+								{
+									"key": "vary",
+									"value": "Accept-Encoding"
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "x-dns-prefetch-control",
+									"value": "off"
+								},
+								{
+									"key": "x-download-options",
+									"value": "noopen"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "x-permitted-cross-domain-policies",
+									"value": "none"
+								},
+								{
+									"key": "x-render-origin-server",
+									"value": "Render"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "cf-cache-status",
+									"value": "DYNAMIC"
+								},
+								{
+									"key": "Server",
+									"value": "cloudflare"
+								},
+								{
+									"key": "alt-svc",
+									"value": "h3=\":443\"; ma=86400"
+								}
+							],
+							"cookie": [
+								{
+									"expires": "Invalid Date",
+									"domain": "",
+									"path": ""
+								}
+							],
+							"body": "{\n    \"success\": true,\n    \"data\": {\n        \"reminders\": {\n            \"overdue\": [],\n            \"today\": [],\n            \"upcoming\": []\n        },\n        \"summary\": {\n            \"total\": 0,\n            \"overdue\": 0,\n            \"today\": 0,\n            \"upcoming\": 0\n        }\n    }\n}\n\n\n// what it looks like\n{\n  \"success\": true,\n  \"data\": {\n    \"reminders\": {\n      \"overdue\": [\n        {\n          \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"title\": \"Follow up with client\",\n          \"description\": \"string\",\n          \"status\": \"pending\",\n          \"priority\": \"medium\",\n          \"type\": \"call\",\n          \"dueDate\": \"2025-11-22\",\n          \"completedAt\": \"2025-11-22T21:38:37.960Z\",\n          \"estimatedDuration\": 30,\n          \"actualDuration\": 0,\n          \"tags\": [\n            \"string\"\n          ],\n          \"assigneeId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"createdBy\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"organizationId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"contactId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"dealId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"createdAt\": \"2025-11-22T21:38:37.960Z\",\n          \"updatedAt\": \"2025-11-22T21:38:37.960Z\",\n          \"relatedType\": \"string\",\n          \"relatedId\": \"string\",\n          \"relatedTitle\": \"string\",\n          \"assigneeName\": \"string\",\n          \"assigneeAvatar\": \"string\",\n          \"createdByName\": \"string\",\n          \"orgId\": \"string\"\n        }\n      ],\n      \"today\": [\n        {\n          \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"title\": \"Follow up with client\",\n          \"description\": \"string\",\n          \"status\": \"pending\",\n          \"priority\": \"medium\",\n          \"type\": \"call\",\n          \"dueDate\": \"2025-11-22\",\n          \"completedAt\": \"2025-11-22T21:38:37.960Z\",\n          \"estimatedDuration\": 30,\n          \"actualDuration\": 0,\n          \"tags\": [\n            \"string\"\n          ],\n          \"assigneeId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"createdBy\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"organizationId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"contactId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"dealId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"createdAt\": \"2025-11-22T21:38:37.960Z\",\n          \"updatedAt\": \"2025-11-22T21:38:37.960Z\",\n          \"relatedType\": \"string\",\n          \"relatedId\": \"string\",\n          \"relatedTitle\": \"string\",\n          \"assigneeName\": \"string\",\n          \"assigneeAvatar\": \"string\",\n          \"createdByName\": \"string\",\n          \"orgId\": \"string\"\n        }\n      ],\n      \"upcoming\": [\n        {\n          \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"title\": \"Follow up with client\",\n          \"description\": \"string\",\n          \"status\": \"pending\",\n          \"priority\": \"medium\",\n          \"type\": \"call\",\n          \"dueDate\": \"2025-11-22\",\n          \"completedAt\": \"2025-11-22T21:38:37.960Z\",\n          \"estimatedDuration\": 30,\n          \"actualDuration\": 0,\n          \"tags\": [\n            \"string\"\n          ],\n          \"assigneeId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"createdBy\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"organizationId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"contactId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"dealId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n          \"createdAt\": \"2025-11-22T21:38:37.960Z\",\n          \"updatedAt\": \"2025-11-22T21:38:37.960Z\",\n          \"relatedType\": \"string\",\n          \"relatedId\": \"string\",\n          \"relatedTitle\": \"string\",\n          \"assigneeName\": \"string\",\n          \"assigneeAvatar\": \"string\",\n          \"createdByName\": \"string\",\n          \"orgId\": \"string\"\n        }\n      ]\n    },\n    \"summary\": {\n      \"total\": 12,\n      \"overdue\": 3,\n      \"today\": 2,\n      \"upcoming\": 7\n    }\n  }\n}"
+						},
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/tasks/reminders",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"tasks",
+										"reminders"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Date",
+									"value": "Tue, 25 Nov 2025 12:31:43 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "482"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "CF-RAY",
+									"value": "9a412a26491f98f0-LHR"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "br"
+								},
+								{
+									"key": "cross-origin-opener-policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "cross-origin-resource-policy",
+									"value": "cross-origin"
+								},
+								{
+									"key": "etag",
+									"value": "W/\"353-yIyQUiKP49J03ElPSZ6Upl6sspA\""
+								},
+								{
+									"key": "origin-agent-cluster",
+									"value": "?1"
+								},
+								{
+									"key": "ratelimit-limit",
+									"value": "100"
+								},
+								{
+									"key": "ratelimit-policy",
+									"value": "100;w=900"
+								},
+								{
+									"key": "ratelimit-remaining",
+									"value": "98"
+								},
+								{
+									"key": "ratelimit-reset",
+									"value": "884"
+								},
+								{
+									"key": "referrer-policy",
+									"value": "strict-origin-when-cross-origin"
+								},
+								{
+									"key": "rndr-id",
+									"value": "3057a3ec-fafc-4703"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=31536000; includeSubDomains; preload"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Accept-Encoding"
+								},
+								{
+									"key": "vary",
+									"value": "Accept-Encoding"
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "x-dns-prefetch-control",
+									"value": "off"
+								},
+								{
+									"key": "x-download-options",
+									"value": "noopen"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "x-permitted-cross-domain-policies",
+									"value": "none"
+								},
+								{
+									"key": "x-render-origin-server",
+									"value": "Render"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "cf-cache-status",
+									"value": "DYNAMIC"
+								},
+								{
+									"key": "Server",
+									"value": "cloudflare"
+								},
+								{
+									"key": "alt-svc",
+									"value": "h3=\":443\"; ma=86400"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": {\n        \"reminders\": {\n            \"overdue\": [\n                {\n                    \"id\": \"12d378b3-0c93-410a-8870-e94cf29eaf55\",\n                    \"title\": \"Follow up with Acme Corp on enterprise proposal\",\n                    \"description\": \"Send detailed timeline and pricing breakdown\",\n                    \"status\": \"pending\",\n                    \"priority\": \"medium\",\n                    \"type\": \"other\",\n                    \"dueDate\": \"2025-11-22T00:00:00.000Z\",\n                    \"reminderDate\": null,\n                    \"completedAt\": null,\n                    \"estimatedDuration\": null,\n                    \"actualDuration\": null,\n                    \"tags\": [],\n                    \"customFields\": {},\n                    \"assigneeId\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\",\n                    \"createdBy\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\",\n                    \"organizationId\": \"8e731615-38e8-4837-821b-c86cb6cda383\",\n                    \"relatedType\": null,\n                    \"relatedId\": null,\n                    \"contactId\": null,\n                    \"dealId\": null,\n                    \"companyId\": null,\n                    \"createdAt\": \"2025-11-23T11:30:40.485Z\",\n                    \"updatedAt\": \"2025-11-23T11:30:40.485Z\",\n                    \"contact\": null,\n                    \"deal\": null\n                }\n            ],\n            \"today\": [],\n            \"upcoming\": []\n        },\n        \"summary\": {\n            \"total\": 1,\n            \"overdue\": 1,\n            \"today\": 0,\n            \"upcoming\": 0\n        }\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "get all tasks",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": [
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/tasks",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"tasks"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Sat, 22 Nov 2025 21:35:47 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "71"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "CF-RAY",
+									"value": "9a2b8efceeb3d519-LHR"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "br"
+								},
+								{
+									"key": "cross-origin-opener-policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "cross-origin-resource-policy",
+									"value": "cross-origin"
+								},
+								{
+									"key": "etag",
+									"value": "W/\"4a-in46kDbyXsUwN9amVg5FNISkzn0\""
+								},
+								{
+									"key": "origin-agent-cluster",
+									"value": "?1"
+								},
+								{
+									"key": "ratelimit-limit",
+									"value": "100"
+								},
+								{
+									"key": "ratelimit-policy",
+									"value": "100;w=900"
+								},
+								{
+									"key": "ratelimit-remaining",
+									"value": "96"
+								},
+								{
+									"key": "ratelimit-reset",
+									"value": "788"
+								},
+								{
+									"key": "referrer-policy",
+									"value": "strict-origin-when-cross-origin"
+								},
+								{
+									"key": "rndr-id",
+									"value": "80074503-6ecb-4ee2"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=31536000; includeSubDomains; preload"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Accept-Encoding"
+								},
+								{
+									"key": "vary",
+									"value": "Accept-Encoding"
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "x-dns-prefetch-control",
+									"value": "off"
+								},
+								{
+									"key": "x-download-options",
+									"value": "noopen"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "x-permitted-cross-domain-policies",
+									"value": "none"
+								},
+								{
+									"key": "x-render-origin-server",
+									"value": "Render"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "cf-cache-status",
+									"value": "DYNAMIC"
+								},
+								{
+									"key": "Server",
+									"value": "cloudflare"
+								},
+								{
+									"key": "alt-svc",
+									"value": "h3=\":443\"; ma=86400"
+								}
+							],
+							"cookie": [
+								{
+									"expires": "Invalid Date",
+									"domain": "",
+									"path": ""
+								}
+							],
+							"body": "{\n    \"data\": [],\n    \"pagination\": {\n        \"page\": 1,\n        \"pageSize\": 25,\n        \"total\": 0,\n        \"totalPages\": 0\n    }\n}\n\n// what it looks like\n{\n  \"data\": [\n    {\n      \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"title\": \"Follow up with client\",\n      \"description\": \"string\",\n      \"status\": \"pending\",\n      \"priority\": \"medium\",\n      \"type\": \"call\",\n      \"dueDate\": \"2025-11-22\",\n      \"completedAt\": \"2025-11-22T21:37:45.593Z\",\n      \"estimatedDuration\": 30,\n      \"actualDuration\": 0,\n      \"tags\": [\n        \"string\"\n      ],\n      \"assigneeId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"createdBy\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"organizationId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"contactId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"dealId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n      \"createdAt\": \"2025-11-22T21:37:45.593Z\",\n      \"updatedAt\": \"2025-11-22T21:37:45.593Z\",\n      \"relatedType\": \"string\",\n      \"relatedId\": \"string\",\n      \"relatedTitle\": \"string\",\n      \"assigneeName\": \"string\",\n      \"assigneeAvatar\": \"string\",\n      \"createdByName\": \"string\",\n      \"orgId\": \"string\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 0,\n    \"pageSize\": 0,\n    \"total\": 0,\n    \"totalPages\": 0\n  }\n}"
+						},
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/tasks",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"tasks"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Date",
+									"value": "Tue, 25 Nov 2025 12:31:28 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "397"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "CF-RAY",
+									"value": "9a4129c0182d98f0-LHR"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "br"
+								},
+								{
+									"key": "cross-origin-opener-policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "cross-origin-resource-policy",
+									"value": "cross-origin"
+								},
+								{
+									"key": "etag",
+									"value": "W/\"2a0-NYVlx4ayJXPVS8sr5uFJmQMato4\""
+								},
+								{
+									"key": "origin-agent-cluster",
+									"value": "?1"
+								},
+								{
+									"key": "ratelimit-limit",
+									"value": "100"
+								},
+								{
+									"key": "ratelimit-policy",
+									"value": "100;w=900"
+								},
+								{
+									"key": "ratelimit-remaining",
+									"value": "99"
+								},
+								{
+									"key": "ratelimit-reset",
+									"value": "900"
+								},
+								{
+									"key": "referrer-policy",
+									"value": "strict-origin-when-cross-origin"
+								},
+								{
+									"key": "rndr-id",
+									"value": "e572014c-04cf-4d39"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=31536000; includeSubDomains; preload"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Accept-Encoding"
+								},
+								{
+									"key": "vary",
+									"value": "Accept-Encoding"
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "x-dns-prefetch-control",
+									"value": "off"
+								},
+								{
+									"key": "x-download-options",
+									"value": "noopen"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "x-permitted-cross-domain-policies",
+									"value": "none"
+								},
+								{
+									"key": "x-render-origin-server",
+									"value": "Render"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "cf-cache-status",
+									"value": "DYNAMIC"
+								},
+								{
+									"key": "Server",
+									"value": "cloudflare"
+								},
+								{
+									"key": "alt-svc",
+									"value": "h3=\":443\"; ma=86400"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"data\": [\n        {\n            \"id\": \"12d378b3-0c93-410a-8870-e94cf29eaf55\",\n            \"title\": \"Follow up with Acme Corp on enterprise proposal\",\n            \"description\": \"Send detailed timeline and pricing breakdown\",\n            \"status\": \"pending\",\n            \"priority\": \"medium\",\n            \"dueDate\": \"2025-11-22T00:00:00.000Z\",\n            \"completedAt\": null,\n            \"relatedType\": null,\n            \"relatedId\": null,\n            \"assigneeId\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\",\n            \"assigneeName\": \"John Doe\",\n            \"assigneeAvatar\": \"JD\",\n            \"createdBy\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\",\n            \"createdByName\": \"John Doe\",\n            \"orgId\": \"8e731615-38e8-4837-821b-c86cb6cda383\",\n            \"createdAt\": \"2025-11-23T11:30:40.485Z\",\n            \"updatedAt\": \"2025-11-23T11:30:40.485Z\"\n        }\n    ],\n    \"pagination\": {\n        \"page\": 1,\n        \"pageSize\": 25,\n        \"total\": 1,\n        \"totalPages\": 1\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "create new task",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Follow up with Acme Corp on enterprise proposal\",\n  \"description\": \"Send detailed timeline and pricing breakdown\",\n  \"status\": \"pending\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"2025-11-22\",\n//   \"relatedType\": \"deal\",\n//   \"relatedId\": \"1\",\n//   \"relatedTitle\": \"Enterprise Software License\",\n  \"assigneeId\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tasks"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"title\": \"string\",\n  \"description\": \"string\",\n  \"status\": \"pending\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"2025-11-22\",\n  \"relatedType\": \"string\",\n  \"relatedId\": \"string\",\n  \"relatedTitle\": \"string\",\n  \"assigneeId\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/tasks",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"tasks"
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Sat, 22 Nov 2025 21:40:54 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "100"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "CF-RAY",
+									"value": "9a2b9679abfeef4a-LHR"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "br"
+								},
+								{
+									"key": "cross-origin-opener-policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "cross-origin-resource-policy",
+									"value": "cross-origin"
+								},
+								{
+									"key": "etag",
+									"value": "W/\"71-gm8DZ2pvFDxoXPoo/WFftpA+pEs\""
+								},
+								{
+									"key": "origin-agent-cluster",
+									"value": "?1"
+								},
+								{
+									"key": "ratelimit-limit",
+									"value": "100"
+								},
+								{
+									"key": "ratelimit-policy",
+									"value": "100;w=900"
+								},
+								{
+									"key": "ratelimit-remaining",
+									"value": "99"
+								},
+								{
+									"key": "ratelimit-reset",
+									"value": "900"
+								},
+								{
+									"key": "referrer-policy",
+									"value": "strict-origin-when-cross-origin"
+								},
+								{
+									"key": "rndr-id",
+									"value": "a304127d-dac4-46ce"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=31536000; includeSubDomains; preload"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Accept-Encoding"
+								},
+								{
+									"key": "vary",
+									"value": "Accept-Encoding"
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "x-dns-prefetch-control",
+									"value": "off"
+								},
+								{
+									"key": "x-download-options",
+									"value": "noopen"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "x-permitted-cross-domain-policies",
+									"value": "none"
+								},
+								{
+									"key": "x-render-origin-server",
+									"value": "Render"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "cf-cache-status",
+									"value": "DYNAMIC"
+								},
+								{
+									"key": "Server",
+									"value": "cloudflare"
+								},
+								{
+									"key": "alt-svc",
+									"value": "h3=\":443\"; ma=86400"
+								}
+							],
+							"cookie": [
+								{
+									"expires": "Invalid Date",
+									"domain": "",
+									"path": ""
+								}
+							],
+							"body": "{\n    \"error\": {\n        \"code\": \"SERVER_ERROR\",\n        \"message\": \"invalid input value for enum \\\"enum_Tasks_relatedType\\\": \\\"string\\\"\"\n    }\n}\n\n\n// what 200 own looks like\n{\n  \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"title\": \"Follow up with client\",\n  \"description\": \"string\",\n  \"status\": \"pending\",\n  \"priority\": \"medium\",\n  \"type\": \"call\",\n  \"dueDate\": \"2025-11-22\",\n  \"completedAt\": \"2025-11-22T21:39:16.168Z\",\n  \"estimatedDuration\": 30,\n  \"actualDuration\": 0,\n  \"tags\": [\n    \"string\"\n  ],\n  \"assigneeId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"createdBy\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"organizationId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"contactId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"dealId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"createdAt\": \"2025-11-22T21:39:16.168Z\",\n  \"updatedAt\": \"2025-11-22T21:39:16.168Z\",\n  \"relatedType\": \"string\",\n  \"relatedId\": \"string\",\n  \"relatedTitle\": \"string\",\n  \"assigneeName\": \"string\",\n  \"assigneeAvatar\": \"string\",\n  \"createdByName\": \"string\",\n  \"orgId\": \"string\"\n}"
+						},
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"title\": \"Follow up with Acme Corp on enterprise proposal\",\n  \"description\": \"Send detailed timeline and pricing breakdown\",\n  \"status\": \"pending\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"2025-11-22\",\n//   \"relatedType\": \"deal\",\n//   \"relatedId\": \"1\",\n//   \"relatedTitle\": \"Enterprise Software License\",\n  \"assigneeId\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/tasks",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"tasks"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Date",
+									"value": "Sun, 23 Nov 2025 11:30:40 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "347"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "CF-RAY",
+									"value": "9a3055f85e4d6367-LHR"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "br"
+								},
+								{
+									"key": "cross-origin-opener-policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "cross-origin-resource-policy",
+									"value": "cross-origin"
+								},
+								{
+									"key": "etag",
+									"value": "W/\"256-QijprRF+D3yZGESnz+u18cR0J1A\""
+								},
+								{
+									"key": "origin-agent-cluster",
+									"value": "?1"
+								},
+								{
+									"key": "ratelimit-limit",
+									"value": "100"
+								},
+								{
+									"key": "ratelimit-policy",
+									"value": "100;w=900"
+								},
+								{
+									"key": "ratelimit-remaining",
+									"value": "99"
+								},
+								{
+									"key": "ratelimit-reset",
+									"value": "900"
+								},
+								{
+									"key": "referrer-policy",
+									"value": "strict-origin-when-cross-origin"
+								},
+								{
+									"key": "rndr-id",
+									"value": "7d755d2c-26bd-405c"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=31536000; includeSubDomains; preload"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Accept-Encoding"
+								},
+								{
+									"key": "vary",
+									"value": "Accept-Encoding"
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "x-dns-prefetch-control",
+									"value": "off"
+								},
+								{
+									"key": "x-download-options",
+									"value": "noopen"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "x-permitted-cross-domain-policies",
+									"value": "none"
+								},
+								{
+									"key": "x-render-origin-server",
+									"value": "Render"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "cf-cache-status",
+									"value": "DYNAMIC"
+								},
+								{
+									"key": "Server",
+									"value": "cloudflare"
+								},
+								{
+									"key": "alt-svc",
+									"value": "h3=\":443\"; ma=86400"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"id\": \"12d378b3-0c93-410a-8870-e94cf29eaf55\",\n    \"title\": \"Follow up with Acme Corp on enterprise proposal\",\n    \"description\": \"Send detailed timeline and pricing breakdown\",\n    \"status\": \"pending\",\n    \"priority\": \"medium\",\n    \"dueDate\": \"2025-11-22T00:00:00.000Z\",\n    \"completedAt\": null,\n    \"relatedType\": null,\n    \"relatedId\": null,\n    \"assigneeId\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\",\n    \"assigneeName\": \"John Doe\",\n    \"assigneeAvatar\": null,\n    \"createdBy\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\",\n    \"createdByName\": \"John Doe\",\n    \"orgId\": \"8e731615-38e8-4837-821b-c86cb6cda383\",\n    \"createdAt\": \"2025-11-23T11:30:40.485Z\",\n    \"updatedAt\": \"2025-11-23T11:30:40.485Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "get tasks by id",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/12d378b3-0c93-410a-8870-e94cf29eaf55",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tasks",
+								"12d378b3-0c93-410a-8870-e94cf29eaf55"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"title\": \"string\",\n  \"description\": \"string\",\n  \"status\": \"pending\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"2025-11-22\",\n  \"relatedType\": \"string\",\n  \"relatedId\": \"string\",\n  \"relatedTitle\": \"string\",\n  \"assigneeId\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"tasks",
+										"3fa85f64-5717-4562-b3fc-2c963f66afa6"
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Sat, 22 Nov 2025 21:42:24 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "61"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "CF-RAY",
+									"value": "9a2b98ae5e8c25e8-LHR"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "br"
+								},
+								{
+									"key": "cross-origin-opener-policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "cross-origin-resource-policy",
+									"value": "cross-origin"
+								},
+								{
+									"key": "etag",
+									"value": "W/\"3e-kSc7gGMGo0XRDsOhvRHrYZRGK/U\""
+								},
+								{
+									"key": "origin-agent-cluster",
+									"value": "?1"
+								},
+								{
+									"key": "ratelimit-limit",
+									"value": "100"
+								},
+								{
+									"key": "ratelimit-policy",
+									"value": "100;w=900"
+								},
+								{
+									"key": "ratelimit-remaining",
+									"value": "94"
+								},
+								{
+									"key": "ratelimit-reset",
+									"value": "391"
+								},
+								{
+									"key": "referrer-policy",
+									"value": "strict-origin-when-cross-origin"
+								},
+								{
+									"key": "rndr-id",
+									"value": "5e4ef77c-fde6-4da1"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=31536000; includeSubDomains; preload"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Accept-Encoding"
+								},
+								{
+									"key": "vary",
+									"value": "Accept-Encoding"
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "x-dns-prefetch-control",
+									"value": "off"
+								},
+								{
+									"key": "x-download-options",
+									"value": "noopen"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "x-permitted-cross-domain-policies",
+									"value": "none"
+								},
+								{
+									"key": "x-render-origin-server",
+									"value": "Render"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "cf-cache-status",
+									"value": "DYNAMIC"
+								},
+								{
+									"key": "Server",
+									"value": "cloudflare"
+								},
+								{
+									"key": "alt-svc",
+									"value": "h3=\":443\"; ma=86400"
+								}
+							],
+							"cookie": [
+								{
+									"expires": "Invalid Date",
+									"domain": "",
+									"path": ""
+								}
+							],
+							"body": "{\n    \"error\": {\n        \"code\": \"TASK_NOT_FOUND\",\n        \"message\": \"Task not found\"\n    }\n}\n\n\n// what 200 own looks like\n\n{\n  \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"title\": \"Follow up with client\",\n  \"description\": \"string\",\n  \"status\": \"pending\",\n  \"priority\": \"medium\",\n  \"type\": \"call\",\n  \"dueDate\": \"2025-11-22\",\n  \"completedAt\": \"2025-11-22T21:41:41.909Z\",\n  \"estimatedDuration\": 30,\n  \"actualDuration\": 0,\n  \"tags\": [\n    \"string\"\n  ],\n  \"assigneeId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"createdBy\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"organizationId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"contactId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"dealId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"createdAt\": \"2025-11-22T21:41:41.909Z\",\n  \"updatedAt\": \"2025-11-22T21:41:41.909Z\",\n  \"relatedType\": \"string\",\n  \"relatedId\": \"string\",\n  \"relatedTitle\": \"string\",\n  \"assigneeName\": \"string\",\n  \"assigneeAvatar\": \"string\",\n  \"createdByName\": \"string\",\n  \"orgId\": \"string\"\n}"
+						},
+						{
+							"name": "get tasks by id",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "{{base_url}}/tasks/12d378b3-0c93-410a-8870-e94cf29eaf55",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"tasks",
+										"12d378b3-0c93-410a-8870-e94cf29eaf55"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Date",
+									"value": "Tue, 25 Nov 2025 12:32:15 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "347"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "CF-RAY",
+									"value": "9a412aea6d1598f0-LHR"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "br"
+								},
+								{
+									"key": "cross-origin-opener-policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "cross-origin-resource-policy",
+									"value": "cross-origin"
+								},
+								{
+									"key": "etag",
+									"value": "W/\"256-QijprRF+D3yZGESnz+u18cR0J1A\""
+								},
+								{
+									"key": "origin-agent-cluster",
+									"value": "?1"
+								},
+								{
+									"key": "ratelimit-limit",
+									"value": "100"
+								},
+								{
+									"key": "ratelimit-policy",
+									"value": "100;w=900"
+								},
+								{
+									"key": "ratelimit-remaining",
+									"value": "96"
+								},
+								{
+									"key": "ratelimit-reset",
+									"value": "853"
+								},
+								{
+									"key": "referrer-policy",
+									"value": "strict-origin-when-cross-origin"
+								},
+								{
+									"key": "rndr-id",
+									"value": "9705f6f1-eec0-41d0"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=31536000; includeSubDomains; preload"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Accept-Encoding"
+								},
+								{
+									"key": "vary",
+									"value": "Accept-Encoding"
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "x-dns-prefetch-control",
+									"value": "off"
+								},
+								{
+									"key": "x-download-options",
+									"value": "noopen"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "x-permitted-cross-domain-policies",
+									"value": "none"
+								},
+								{
+									"key": "x-render-origin-server",
+									"value": "Render"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "cf-cache-status",
+									"value": "DYNAMIC"
+								},
+								{
+									"key": "Server",
+									"value": "cloudflare"
+								},
+								{
+									"key": "alt-svc",
+									"value": "h3=\":443\"; ma=86400"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"id\": \"12d378b3-0c93-410a-8870-e94cf29eaf55\",\n    \"title\": \"Follow up with Acme Corp on enterprise proposal\",\n    \"description\": \"Send detailed timeline and pricing breakdown\",\n    \"status\": \"pending\",\n    \"priority\": \"medium\",\n    \"dueDate\": \"2025-11-22T00:00:00.000Z\",\n    \"completedAt\": null,\n    \"relatedType\": null,\n    \"relatedId\": null,\n    \"assigneeId\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\",\n    \"assigneeName\": \"John Doe\",\n    \"assigneeAvatar\": null,\n    \"createdBy\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\",\n    \"createdByName\": \"John Doe\",\n    \"orgId\": \"8e731615-38e8-4837-821b-c86cb6cda383\",\n    \"createdAt\": \"2025-11-23T11:30:40.485Z\",\n    \"updatedAt\": \"2025-11-23T11:30:40.485Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "update a task",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Follow up with Acme Corp on enterprise proposal\",\n  \"description\": \"Send detailed timeline and pricing breakdown\",\n  \"status\": \"pending\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"2025-11-26\",\n//   \"relatedType\": \"deal\",\n//   \"relatedId\": \"1\",\n//   \"relatedTitle\": \"Enterprise Software License\",\n  \"assigneeId\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/12d378b3-0c93-410a-8870-e94cf29eaf55",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tasks",
+								"12d378b3-0c93-410a-8870-e94cf29eaf55"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"title\": \"string\",\n  \"description\": \"string\",\n  \"status\": \"pending\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"2025-11-22\",\n  \"relatedType\": \"string\",\n  \"relatedId\": \"string\",\n  \"relatedTitle\": \"string\",\n  \"assigneeId\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"tasks",
+										"3fa85f64-5717-4562-b3fc-2c963f66afa6"
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Sat, 22 Nov 2025 21:43:38 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "61"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "CF-RAY",
+									"value": "9a2b9a7e7a7b642d-LHR"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "br"
+								},
+								{
+									"key": "cross-origin-opener-policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "cross-origin-resource-policy",
+									"value": "cross-origin"
+								},
+								{
+									"key": "etag",
+									"value": "W/\"3e-kSc7gGMGo0XRDsOhvRHrYZRGK/U\""
+								},
+								{
+									"key": "origin-agent-cluster",
+									"value": "?1"
+								},
+								{
+									"key": "ratelimit-limit",
+									"value": "100"
+								},
+								{
+									"key": "ratelimit-policy",
+									"value": "100;w=900"
+								},
+								{
+									"key": "ratelimit-remaining",
+									"value": "98"
+								},
+								{
+									"key": "ratelimit-reset",
+									"value": "736"
+								},
+								{
+									"key": "referrer-policy",
+									"value": "strict-origin-when-cross-origin"
+								},
+								{
+									"key": "rndr-id",
+									"value": "018052c8-e3d3-4b63"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=31536000; includeSubDomains; preload"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Accept-Encoding"
+								},
+								{
+									"key": "vary",
+									"value": "Accept-Encoding"
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "x-dns-prefetch-control",
+									"value": "off"
+								},
+								{
+									"key": "x-download-options",
+									"value": "noopen"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "x-permitted-cross-domain-policies",
+									"value": "none"
+								},
+								{
+									"key": "x-render-origin-server",
+									"value": "Render"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "cf-cache-status",
+									"value": "DYNAMIC"
+								},
+								{
+									"key": "Server",
+									"value": "cloudflare"
+								},
+								{
+									"key": "alt-svc",
+									"value": "h3=\":443\"; ma=86400"
+								}
+							],
+							"cookie": [
+								{
+									"expires": "Invalid Date",
+									"domain": "",
+									"path": ""
+								}
+							],
+							"body": "{\n    \"error\": {\n        \"code\": \"TASK_NOT_FOUND\",\n        \"message\": \"Task not found\"\n    }\n}\n\n\n\n// what 200 own looks like\n\n{\n  \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"title\": \"Follow up with client\",\n  \"description\": \"string\",\n  \"status\": \"pending\",\n  \"priority\": \"medium\",\n  \"type\": \"call\",\n  \"dueDate\": \"2025-11-22\",\n  \"completedAt\": \"2025-11-22T21:43:07.455Z\",\n  \"estimatedDuration\": 30,\n  \"actualDuration\": 0,\n  \"tags\": [\n    \"string\"\n  ],\n  \"assigneeId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"createdBy\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"organizationId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"contactId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"dealId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"createdAt\": \"2025-11-22T21:43:07.455Z\",\n  \"updatedAt\": \"2025-11-22T21:43:07.455Z\",\n  \"relatedType\": \"string\",\n  \"relatedId\": \"string\",\n  \"relatedTitle\": \"string\",\n  \"assigneeName\": \"string\",\n  \"assigneeAvatar\": \"string\",\n  \"createdByName\": \"string\",\n  \"orgId\": \"string\"\n}"
+						},
+						{
+							"name": "update a task",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"title\": \"Follow up with Acme Corp on enterprise proposal\",\n  \"description\": \"Send detailed timeline and pricing breakdown\",\n  \"status\": \"pending\",\n  \"priority\": \"medium\",\n  \"dueDate\": \"2025-11-26\",\n//   \"relatedType\": \"deal\",\n//   \"relatedId\": \"1\",\n//   \"relatedTitle\": \"Enterprise Software License\",\n  \"assigneeId\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/tasks/12d378b3-0c93-410a-8870-e94cf29eaf55",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"tasks",
+										"12d378b3-0c93-410a-8870-e94cf29eaf55"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Date",
+									"value": "Tue, 25 Nov 2025 12:32:41 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "359"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "CF-RAY",
+									"value": "9a412b8feaca98f0-LHR"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "br"
+								},
+								{
+									"key": "cross-origin-opener-policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "cross-origin-resource-policy",
+									"value": "cross-origin"
+								},
+								{
+									"key": "etag",
+									"value": "W/\"256-nU7KRhzUbtJwuWk9YxwJ6YLF9Kc\""
+								},
+								{
+									"key": "origin-agent-cluster",
+									"value": "?1"
+								},
+								{
+									"key": "ratelimit-limit",
+									"value": "100"
+								},
+								{
+									"key": "ratelimit-policy",
+									"value": "100;w=900"
+								},
+								{
+									"key": "ratelimit-remaining",
+									"value": "99"
+								},
+								{
+									"key": "ratelimit-reset",
+									"value": "900"
+								},
+								{
+									"key": "referrer-policy",
+									"value": "strict-origin-when-cross-origin"
+								},
+								{
+									"key": "rndr-id",
+									"value": "aa04f80e-c143-47bb"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=31536000; includeSubDomains; preload"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Accept-Encoding"
+								},
+								{
+									"key": "vary",
+									"value": "Accept-Encoding"
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "x-dns-prefetch-control",
+									"value": "off"
+								},
+								{
+									"key": "x-download-options",
+									"value": "noopen"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "x-permitted-cross-domain-policies",
+									"value": "none"
+								},
+								{
+									"key": "x-render-origin-server",
+									"value": "Render"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "cf-cache-status",
+									"value": "DYNAMIC"
+								},
+								{
+									"key": "Server",
+									"value": "cloudflare"
+								},
+								{
+									"key": "alt-svc",
+									"value": "h3=\":443\"; ma=86400"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"id\": \"12d378b3-0c93-410a-8870-e94cf29eaf55\",\n    \"title\": \"Follow up with Acme Corp on enterprise proposal\",\n    \"description\": \"Send detailed timeline and pricing breakdown\",\n    \"status\": \"pending\",\n    \"priority\": \"medium\",\n    \"dueDate\": \"2025-11-26T00:00:00.000Z\",\n    \"completedAt\": null,\n    \"relatedType\": null,\n    \"relatedId\": null,\n    \"assigneeId\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\",\n    \"assigneeName\": \"John Doe\",\n    \"assigneeAvatar\": null,\n    \"createdBy\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\",\n    \"createdByName\": \"John Doe\",\n    \"orgId\": \"8e731615-38e8-4837-821b-c86cb6cda383\",\n    \"createdAt\": \"2025-11-23T11:30:40.485Z\",\n    \"updatedAt\": \"2025-11-25T12:32:41.569Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "delete a task",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/3fa85f64-5717-4562-b3fc-2c963f66afa6",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tasks",
+								"3fa85f64-5717-4562-b3fc-2c963f66afa6"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "perform bulk operation",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"action\": \"complete\",\n  \"taskIds\": [\n    \"string\"\n  ],\n  \"data\": {\n    \"assigneeId\": \"string\",\n    \"priority\": \"low\",\n    \"dueDate\": \"2025-11-22T21:44:32.156Z\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/bulk",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tasks",
+								"bulk"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"action\": \"complete\",\n  \"taskIds\": [\n    \"string\"\n  ],\n  \"data\": {\n    \"assigneeId\": \"string\",\n    \"priority\": \"low\",\n    \"dueDate\": \"2025-11-22T21:44:32.156Z\"\n  }\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/tasks/bulk",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"tasks",
+										"bulk"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Date",
+									"value": "Sat, 22 Nov 2025 21:45:44 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "166"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "CF-RAY",
+									"value": "9a2b9d940fbc94f0-LHR"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "br"
+								},
+								{
+									"key": "cross-origin-opener-policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "cross-origin-resource-policy",
+									"value": "cross-origin"
+								},
+								{
+									"key": "etag",
+									"value": "W/\"f8-8QSwUsJvLxAaZLouqGR53IIZxLs\""
+								},
+								{
+									"key": "origin-agent-cluster",
+									"value": "?1"
+								},
+								{
+									"key": "ratelimit-limit",
+									"value": "100"
+								},
+								{
+									"key": "ratelimit-policy",
+									"value": "100;w=900"
+								},
+								{
+									"key": "ratelimit-remaining",
+									"value": "97"
+								},
+								{
+									"key": "ratelimit-reset",
+									"value": "610"
+								},
+								{
+									"key": "referrer-policy",
+									"value": "strict-origin-when-cross-origin"
+								},
+								{
+									"key": "rndr-id",
+									"value": "be6fe668-533d-41a5"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=31536000; includeSubDomains; preload"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Accept-Encoding"
+								},
+								{
+									"key": "vary",
+									"value": "Accept-Encoding"
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "x-dns-prefetch-control",
+									"value": "off"
+								},
+								{
+									"key": "x-download-options",
+									"value": "noopen"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "x-permitted-cross-domain-policies",
+									"value": "none"
+								},
+								{
+									"key": "x-render-origin-server",
+									"value": "Render"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "cf-cache-status",
+									"value": "DYNAMIC"
+								},
+								{
+									"key": "Server",
+									"value": "cloudflare"
+								},
+								{
+									"key": "alt-svc",
+									"value": "h3=\":443\"; ma=86400"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"message\": \"Bulk complete operation completed\",\n    \"results\": {\n        \"successful\": [\n            {\n                \"taskId\": \"string\",\n                \"action\": \"complete\",\n                \"description\": \"Marked as complete\",\n                \"updatedAt\": \"2025-11-22T21:45:44.753Z\"\n            }\n        ],\n        \"failed\": [],\n        \"summary\": {\n            \"total\": 1,\n            \"successful\": 1,\n            \"failed\": 0\n        }\n    }\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "user",
+			"item": [
+				{
+					"name": "user stats",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{base_url}}/users/stats",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"stats"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "{{base_url}}/users/stats",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"users",
+										"stats"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Date",
+									"value": "Wed, 26 Nov 2025 11:55:32 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "125"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "CF-RAY",
+									"value": "9a493284eb223052-LHR"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "br"
+								},
+								{
+									"key": "cross-origin-opener-policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "cross-origin-resource-policy",
+									"value": "cross-origin"
+								},
+								{
+									"key": "etag",
+									"value": "W/\"b2-uXuOvmgQzb4hadQK5Iys2h+lkC4\""
+								},
+								{
+									"key": "origin-agent-cluster",
+									"value": "?1"
+								},
+								{
+									"key": "ratelimit-limit",
+									"value": "100"
+								},
+								{
+									"key": "ratelimit-policy",
+									"value": "100;w=900"
+								},
+								{
+									"key": "ratelimit-remaining",
+									"value": "99"
+								},
+								{
+									"key": "ratelimit-reset",
+									"value": "900"
+								},
+								{
+									"key": "referrer-policy",
+									"value": "strict-origin-when-cross-origin"
+								},
+								{
+									"key": "rndr-id",
+									"value": "28d2969c-4259-4b51"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=31536000; includeSubDomains; preload"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Accept-Encoding"
+								},
+								{
+									"key": "vary",
+									"value": "Accept-Encoding"
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "x-dns-prefetch-control",
+									"value": "off"
+								},
+								{
+									"key": "x-download-options",
+									"value": "noopen"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "x-permitted-cross-domain-policies",
+									"value": "none"
+								},
+								{
+									"key": "x-render-origin-server",
+									"value": "Render"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "cf-cache-status",
+									"value": "DYNAMIC"
+								},
+								{
+									"key": "Server",
+									"value": "cloudflare"
+								},
+								{
+									"key": "alt-svc",
+									"value": "h3=\":443\"; ma=86400"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": \"User statistics retrieved successfully\",\n    \"message\": {\n        \"overview\": {\n            \"totalUsers\": 1,\n            \"activeUsers\": 1,\n            \"inactiveUsers\": 0,\n            \"recentlyJoined\": 1\n        },\n        \"byRole\": {\n            \"owner\": 1\n        }\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "get users",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "New Request",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "{{base_url}}/users/stats",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"users",
+										"stats"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Date",
+									"value": "Wed, 26 Nov 2025 11:55:32 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "125"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "CF-RAY",
+									"value": "9a493284eb223052-LHR"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "br"
+								},
+								{
+									"key": "cross-origin-opener-policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "cross-origin-resource-policy",
+									"value": "cross-origin"
+								},
+								{
+									"key": "etag",
+									"value": "W/\"b2-uXuOvmgQzb4hadQK5Iys2h+lkC4\""
+								},
+								{
+									"key": "origin-agent-cluster",
+									"value": "?1"
+								},
+								{
+									"key": "ratelimit-limit",
+									"value": "100"
+								},
+								{
+									"key": "ratelimit-policy",
+									"value": "100;w=900"
+								},
+								{
+									"key": "ratelimit-remaining",
+									"value": "99"
+								},
+								{
+									"key": "ratelimit-reset",
+									"value": "900"
+								},
+								{
+									"key": "referrer-policy",
+									"value": "strict-origin-when-cross-origin"
+								},
+								{
+									"key": "rndr-id",
+									"value": "28d2969c-4259-4b51"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=31536000; includeSubDomains; preload"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Accept-Encoding"
+								},
+								{
+									"key": "vary",
+									"value": "Accept-Encoding"
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "x-dns-prefetch-control",
+									"value": "off"
+								},
+								{
+									"key": "x-download-options",
+									"value": "noopen"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "x-permitted-cross-domain-policies",
+									"value": "none"
+								},
+								{
+									"key": "x-render-origin-server",
+									"value": "Render"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "cf-cache-status",
+									"value": "DYNAMIC"
+								},
+								{
+									"key": "Server",
+									"value": "cloudflare"
+								},
+								{
+									"key": "alt-svc",
+									"value": "h3=\":443\"; ma=86400"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": \"User statistics retrieved successfully\",\n    \"message\": {\n        \"overview\": {\n            \"totalUsers\": 1,\n            \"activeUsers\": 1,\n            \"inactiveUsers\": 0,\n            \"recentlyJoined\": 1\n        },\n        \"byRole\": {\n            \"owner\": 1\n        }\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "get individual user by id",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{base_url}}/users/53dd8937-389c-4c9a-a3ba-7a05176fe6f9",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"53dd8937-389c-4c9a-a3ba-7a05176fe6f9"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "get individual user by id",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "{{base_url}}/users/53dd8937-389c-4c9a-a3ba-7a05176fe6f9",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"users",
+										"53dd8937-389c-4c9a-a3ba-7a05176fe6f9"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Date",
+									"value": "Wed, 26 Nov 2025 12:03:33 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "355"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "CF-RAY",
+									"value": "9a493e40d967b6d8-LHR"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "br"
+								},
+								{
+									"key": "cross-origin-opener-policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "cross-origin-resource-policy",
+									"value": "cross-origin"
+								},
+								{
+									"key": "etag",
+									"value": "W/\"21e-TH9AMX+1cWRxkEiZvPsdNCORdhg\""
+								},
+								{
+									"key": "origin-agent-cluster",
+									"value": "?1"
+								},
+								{
+									"key": "ratelimit-limit",
+									"value": "100"
+								},
+								{
+									"key": "ratelimit-policy",
+									"value": "100;w=900"
+								},
+								{
+									"key": "ratelimit-remaining",
+									"value": "99"
+								},
+								{
+									"key": "ratelimit-reset",
+									"value": "900"
+								},
+								{
+									"key": "referrer-policy",
+									"value": "strict-origin-when-cross-origin"
+								},
+								{
+									"key": "rndr-id",
+									"value": "58e636b1-6c3a-4fb3"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=31536000; includeSubDomains; preload"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Accept-Encoding"
+								},
+								{
+									"key": "vary",
+									"value": "Accept-Encoding"
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "x-dns-prefetch-control",
+									"value": "off"
+								},
+								{
+									"key": "x-download-options",
+									"value": "noopen"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "x-permitted-cross-domain-policies",
+									"value": "none"
+								},
+								{
+									"key": "x-render-origin-server",
+									"value": "Render"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "cf-cache-status",
+									"value": "DYNAMIC"
+								},
+								{
+									"key": "Server",
+									"value": "cloudflare"
+								},
+								{
+									"key": "alt-svc",
+									"value": "h3=\":443\"; ma=86400"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": \"User retrieved successfully\",\n    \"message\": {\n        \"user\": {\n            \"id\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\",\n            \"firstName\": \"John\",\n            \"lastName\": \"Doe\",\n            \"email\": \"akinluaolorunfunminiyi@gmail.com\",\n            \"role\": \"owner\",\n            \"status\": \"active\",\n            \"avatar\": null,\n            \"phone\": null,\n            \"timezone\": \"America/New_York\",\n            \"language\": \"en\",\n            \"organizationId\": \"8e731615-38e8-4837-821b-c86cb6cda383\",\n            \"lastLoginAt\": null,\n            \"emailVerified\": false,\n            \"passwordResetExpires\": \"2025-11-22T22:29:11.642Z\",\n            \"settings\": {},\n            \"createdAt\": \"2025-11-22T19:05:08.892Z\",\n            \"updatedAt\": \"2025-11-22T21:29:11.642Z\"\n        }\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "update a user",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"tesals\",\n  \"lastName\": \"niyi\",\n  \"email\": \"akinluaolorunfunminiyi@gmail.com\",\n//   \"role\": \"string\",\n  \"phone\": \"09159899405\",\n//   \"jobTitle\": \"string\",\n//   \"department\": \"string\",\n  \"status\": \"active\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/users/53dd8937-389c-4c9a-a3ba-7a05176fe6f9",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"53dd8937-389c-4c9a-a3ba-7a05176fe6f9"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "get individual user by id Copy",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"firstName\": \"tesals\",\n  \"lastName\": \"niyi\",\n  \"email\": \"akinluaolorunfunminiyi@gmail.com\",\n//   \"role\": \"string\",\n  \"phone\": \"09159899405\",\n//   \"jobTitle\": \"string\",\n//   \"department\": \"string\",\n  \"status\": \"active\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/users/53dd8937-389c-4c9a-a3ba-7a05176fe6f9",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"users",
+										"53dd8937-389c-4c9a-a3ba-7a05176fe6f9"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "",
+							"header": [
+								{
+									"key": "Date",
+									"value": "Wed, 26 Nov 2025 12:27:51 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json; charset=utf-8"
+								},
+								{
+									"key": "Content-Length",
+									"value": "371"
+								},
+								{
+									"key": "Connection",
+									"value": "keep-alive"
+								},
+								{
+									"key": "CF-RAY",
+									"value": "9a495f9e8f7dd675-LHR"
+								},
+								{
+									"key": "access-control-allow-credentials",
+									"value": "true"
+								},
+								{
+									"key": "access-control-expose-headers",
+									"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+								},
+								{
+									"key": "Content-Encoding",
+									"value": "br"
+								},
+								{
+									"key": "cross-origin-opener-policy",
+									"value": "same-origin"
+								},
+								{
+									"key": "cross-origin-resource-policy",
+									"value": "cross-origin"
+								},
+								{
+									"key": "etag",
+									"value": "W/\"228-3HEdfUfr+a8fTjzQbFRqQvfpSeo\""
+								},
+								{
+									"key": "origin-agent-cluster",
+									"value": "?1"
+								},
+								{
+									"key": "ratelimit-limit",
+									"value": "100"
+								},
+								{
+									"key": "ratelimit-policy",
+									"value": "100;w=900"
+								},
+								{
+									"key": "ratelimit-remaining",
+									"value": "99"
+								},
+								{
+									"key": "ratelimit-reset",
+									"value": "900"
+								},
+								{
+									"key": "referrer-policy",
+									"value": "strict-origin-when-cross-origin"
+								},
+								{
+									"key": "rndr-id",
+									"value": "c8413c4d-1ec5-40ba"
+								},
+								{
+									"key": "strict-transport-security",
+									"value": "max-age=31536000; includeSubDomains; preload"
+								},
+								{
+									"key": "vary",
+									"value": "Origin, Accept-Encoding"
+								},
+								{
+									"key": "vary",
+									"value": "Accept-Encoding"
+								},
+								{
+									"key": "x-content-type-options",
+									"value": "nosniff"
+								},
+								{
+									"key": "x-dns-prefetch-control",
+									"value": "off"
+								},
+								{
+									"key": "x-download-options",
+									"value": "noopen"
+								},
+								{
+									"key": "x-frame-options",
+									"value": "DENY"
+								},
+								{
+									"key": "x-permitted-cross-domain-policies",
+									"value": "none"
+								},
+								{
+									"key": "x-render-origin-server",
+									"value": "Render"
+								},
+								{
+									"key": "x-xss-protection",
+									"value": "1; mode=block"
+								},
+								{
+									"key": "cf-cache-status",
+									"value": "DYNAMIC"
+								},
+								{
+									"key": "Server",
+									"value": "cloudflare"
+								},
+								{
+									"key": "alt-svc",
+									"value": "h3=\":443\"; ma=86400"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"success\": true,\n    \"data\": \"User updated successfully\",\n    \"message\": {\n        \"user\": {\n            \"id\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\",\n            \"firstName\": \"tesals\",\n            \"lastName\": \"niyi\",\n            \"email\": \"akinluaolorunfunminiyi@gmail.com\",\n            \"role\": \"owner\",\n            \"status\": \"active\",\n            \"avatar\": null,\n            \"phone\": \"09159899405\",\n            \"timezone\": \"America/New_York\",\n            \"language\": \"en\",\n            \"organizationId\": \"8e731615-38e8-4837-821b-c86cb6cda383\",\n            \"lastLoginAt\": null,\n            \"emailVerified\": false,\n            \"passwordResetExpires\": \"2025-11-22T22:29:11.642Z\",\n            \"settings\": {},\n            \"createdAt\": \"2025-11-22T19:05:08.892Z\",\n            \"updatedAt\": \"2025-11-26T12:27:51.745Z\"\n        }\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "deactivete account",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"tesals\",\n  \"lastName\": \"niyi\",\n  \"email\": \"akinluaolorunfunminiyi@gmail.com\",\n//   \"role\": \"string\",\n  \"phone\": \"09159899405\",\n//   \"jobTitle\": \"string\",\n//   \"department\": \"string\",\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/53dd8937-389c-4c9a-a3ba-7a05176fe6f9",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"53dd8937-389c-4c9a-a3ba-7a05176fe6f9"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "login",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"secret123\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/auth/login",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"auth",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "auth me",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://crm-be-deployed.onrender.com/api/auth/me",
+					"protocol": "https",
+					"host": [
+						"crm-be-deployed",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"api",
+						"auth",
+						"me"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "New Request",
+					"originalRequest": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI1M2RkODkzNy0zODljLTRjOWEtYTNiYS03YTA1MTc2ZmU2ZjkiLCJvcmdhbml6YXRpb25JZCI6IjhlNzMxNjE1LTM4ZTgtNDgzNy04MjFiLWM4NmNiNmNkYTM4MyIsImlhdCI6MTc2MzgzODM4MSwiZXhwIjoxNzY0NDQzMTgxfQ.H6iAGXFvGv_p3tP40HhsFI3z5753eAfAodc4GjPQXqU",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "https://crm-be-deployed.onrender.com/api/auth/me",
+							"protocol": "https",
+							"host": [
+								"crm-be-deployed",
+								"onrender",
+								"com"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": null,
+					"header": [
+						{
+							"key": "Date",
+							"value": "Sat, 22 Nov 2025 19:11:17 GMT"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "239"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						},
+						{
+							"key": "CF-RAY",
+							"value": "9a2abb539fec642a-LHR"
+						},
+						{
+							"key": "access-control-allow-credentials",
+							"value": "true"
+						},
+						{
+							"key": "access-control-expose-headers",
+							"value": "X-Total-Count,X-Page-Count,X-Current-Page,X-Per-Page,Link,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset"
+						},
+						{
+							"key": "Content-Encoding",
+							"value": "br"
+						},
+						{
+							"key": "cross-origin-opener-policy",
+							"value": "same-origin"
+						},
+						{
+							"key": "cross-origin-resource-policy",
+							"value": "cross-origin"
+						},
+						{
+							"key": "etag",
+							"value": "W/\"144-YIY/Nx81IrdnMqXR5RVjDE/YlTI\""
+						},
+						{
+							"key": "origin-agent-cluster",
+							"value": "?1"
+						},
+						{
+							"key": "ratelimit-limit",
+							"value": "10"
+						},
+						{
+							"key": "ratelimit-policy",
+							"value": "10;w=900"
+						},
+						{
+							"key": "ratelimit-remaining",
+							"value": "8"
+						},
+						{
+							"key": "ratelimit-reset",
+							"value": "603"
+						},
+						{
+							"key": "referrer-policy",
+							"value": "strict-origin-when-cross-origin"
+						},
+						{
+							"key": "rndr-id",
+							"value": "1881b35a-10ea-476b"
+						},
+						{
+							"key": "strict-transport-security",
+							"value": "max-age=31536000; includeSubDomains; preload"
+						},
+						{
+							"key": "vary",
+							"value": "Origin, Accept-Encoding"
+						},
+						{
+							"key": "vary",
+							"value": "Accept-Encoding"
+						},
+						{
+							"key": "x-content-type-options",
+							"value": "nosniff"
+						},
+						{
+							"key": "x-dns-prefetch-control",
+							"value": "off"
+						},
+						{
+							"key": "x-download-options",
+							"value": "noopen"
+						},
+						{
+							"key": "x-frame-options",
+							"value": "DENY"
+						},
+						{
+							"key": "x-permitted-cross-domain-policies",
+							"value": "none"
+						},
+						{
+							"key": "x-render-origin-server",
+							"value": "Render"
+						},
+						{
+							"key": "x-xss-protection",
+							"value": "1; mode=block"
+						},
+						{
+							"key": "cf-cache-status",
+							"value": "DYNAMIC"
+						},
+						{
+							"key": "Server",
+							"value": "cloudflare"
+						},
+						{
+							"key": "alt-svc",
+							"value": "h3=\":443\"; ma=86400"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"success\": true,\n    \"data\": \"User profile retrieved\",\n    \"message\": {\n        \"user\": {\n            \"id\": \"53dd8937-389c-4c9a-a3ba-7a05176fe6f9\",\n            \"firstName\": \"John\",\n            \"lastName\": \"Doe\",\n            \"email\": \"akinluaolorunfunminiyi@gmail.com\",\n            \"role\": \"owner\",\n            \"status\": \"active\",\n            \"emailVerified\": false,\n            \"organization\": {\n                \"id\": \"8e731615-38e8-4837-821b-c86cb6cda383\",\n                \"name\": \"Tesals\"\n            }\n        }\n    }\n}"
+				}
+			]
+		},
+		{
+			"name": "get invitation",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		},
+		{
+			"name": "forgot-password",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email:\": \"akinluaolorunfunminiyi@gmail.com\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://crm-be-deployed.onrender.com/api/auth/forgot-password",
+					"protocol": "https",
+					"host": [
+						"crm-be-deployed",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"api",
+						"auth",
+						"forgot-password"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "New Request",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		},
+		{
+			"name": "New Request",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

@@ -18,7 +18,7 @@ import { Sparkles, Plus } from "lucide-react";
 const DashboardPage = () => {
   const navigate = useNavigate();
   const { organization } = useSession();
-  
+
   const [loading, setLoading] = useState(true);
   const [kpiData, setKpiData] = useState<KpiData[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -34,14 +34,14 @@ const DashboardPage = () => {
     try {
       // Load contacts, deals, and tasks
       const [contactsResult, dealsResult, tasksResult] = await Promise.all([
-        contactsApi.getContacts({}, 1, 1000),
-        dealsApi.getDeals({}, 1, 1000),
+        contactsApi.getContacts({}, 1, 100),
+        dealsApi.getDeals({}, 1, 100),
         tasksApi.getTasks({})
       ]);
 
       const contacts = contactsResult.data;
       const deals = dealsResult.data;
-      const tasks = tasksResult;
+      const tasks = tasksResult.data;
 
       // Check if new org
       setIsNewOrg(contacts.length === 0 && deals.length === 0 && tasks.length === 0);
@@ -174,110 +174,110 @@ const DashboardPage = () => {
   return (
     <PageBackground variant="dashboard">
       <div className="space-y-4 sm:space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="animate-slide-in-left">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
-          Dashboard
-        </h1>
-        <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-          {organization?.name ? `Welcome to ${organization.name}!` : 'Welcome back!'} Here's what's happening with your business today.
-        </p>
-      </div>
+        {/* Header */}
+        <div className="animate-slide-in-left">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+            Dashboard
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+            {organization?.name ? `Welcome to ${organization.name}!` : 'Welcome back!'} Here's what's happening with your business today.
+          </p>
+        </div>
 
-      {/* Welcome State for New Organizations */}
-      {isNewOrg && (
-        <Card className="card-elevated border-primary/20 animate-slide-in-left">
-          <CardContent className="p-6 sm:p-8">
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center">
-                <Sparkles className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold mb-2">Welcome to CraftPoint CRM!</h2>
-                <p className="text-muted-foreground max-w-md">
-                  Get started by adding your first contact or deal. Build your customer relationships and grow your business.
-                </p>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <Button 
-                  onClick={() => navigate('/app/contacts')}
-                  className="btn-primary"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Contact
-                </Button>
-                <Button 
-                  onClick={() => navigate('/app/deals')}
-                  variant="outline"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Deal
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 animate-slide-up">
-        {loading ? (
-          Array.from({ length: 5 }).map((_, index) => (
-            <div key={index} className="animate-pulse">
-              <KpiCard data={{} as KpiData} isLoading={true} />
-            </div>
-          ))
-        ) : (
-          kpiData.map((kpi, index) => (
-            <div key={kpi.id} className="animate-slide-in-left" style={{animationDelay: `${index * 100}ms`}}>
-              <KpiCard data={kpi} />
-            </div>
-          ))
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 animate-slide-up" style={{animationDelay: '300ms'}}>
-        {/* Pipeline Overview */}
-        <Card className="lg:col-span-2 card-elevated hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
-          <CardHeader className="pb-3 sm:pb-6">
-            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-              Sales Pipeline
-              <div className="h-2 w-2 rounded-full bg-primary animate-pulse-glow"></div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="space-y-3 sm:space-y-4">
-              {dealsPipeline.map((stage, index) => (
-                <div key={stage.stage} className="space-y-2 group animate-slide-in-right" style={{animationDelay: `${index * 150}ms`}}>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm sm:text-base font-medium group-hover:text-primary transition-colors duration-200">{stage.stage}</span>
-                    <div className="text-right">
-                      <div className="text-sm sm:text-base font-semibold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">{stage.value}</div>
-                      <div className="text-xs text-muted-foreground">{stage.count} deals</div>
-                    </div>
-                  </div>
-                  <Progress value={(stage.count / 45) * 100} className="h-2 sm:h-3 shadow-sm group-hover:shadow-md transition-shadow duration-200" />
+        {/* Welcome State for New Organizations */}
+        {isNewOrg && (
+          <Card className="card-elevated border-primary/20 animate-slide-in-left">
+            <CardContent className="p-6 sm:p-8">
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center">
+                  <Sparkles className="w-8 h-8 text-primary" />
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <div>
+                  <h2 className="text-xl font-bold mb-2">Welcome to CraftPoint CRM!</h2>
+                  <p className="text-muted-foreground max-w-md">
+                    Get started by adding your first contact or deal. Build your customer relationships and grow your business.
+                  </p>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    onClick={() => navigate('/app/contacts')}
+                    className="btn-primary"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Contact
+                  </Button>
+                  <Button
+                    onClick={() => navigate('/app/deals')}
+                    variant="outline"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Deal
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Activity Feed */}
-        <div className="hidden lg:block animate-slide-in-right" style={{animationDelay: '400ms'}}>
-          <ActivityFeed 
-            activities={activities} 
-            isLoading={loading}
-            hasMore={false}
-            onLoadMore={() => {}}
-          />
+        {/* KPI Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 animate-slide-up">
+          {loading ? (
+            Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="animate-pulse">
+                <KpiCard data={{} as KpiData} isLoading={true} />
+              </div>
+            ))
+          ) : (
+            kpiData.map((kpi, index) => (
+              <div key={kpi.id} className="animate-slide-in-left" style={{ animationDelay: `${index * 100}ms` }}>
+                <KpiCard data={kpi} />
+              </div>
+            ))
+          )}
         </div>
 
-        {/* Quick Actions */}
-        <div className="animate-slide-in-right" style={{animationDelay: '500ms'}}>
-          <QuickActions />
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 animate-slide-up" style={{ animationDelay: '300ms' }}>
+          {/* Pipeline Overview */}
+          <Card className="lg:col-span-2 card-elevated hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
+            <CardHeader className="pb-3 sm:pb-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                Sales Pipeline
+                <div className="h-2 w-2 rounded-full bg-primary animate-pulse-glow"></div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-3 sm:space-y-4">
+                {dealsPipeline.map((stage, index) => (
+                  <div key={stage.stage} className="space-y-2 group animate-slide-in-right" style={{ animationDelay: `${index * 150}ms` }}>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm sm:text-base font-medium group-hover:text-primary transition-colors duration-200">{stage.stage}</span>
+                      <div className="text-right">
+                        <div className="text-sm sm:text-base font-semibold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">{stage.value}</div>
+                        <div className="text-xs text-muted-foreground">{stage.count} deals</div>
+                      </div>
+                    </div>
+                    <Progress value={(stage.count / 45) * 100} className="h-2 sm:h-3 shadow-sm group-hover:shadow-md transition-shadow duration-200" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Activity Feed */}
+          <div className="hidden lg:block animate-slide-in-right" style={{ animationDelay: '400ms' }}>
+            <ActivityFeed
+              activities={activities}
+              isLoading={loading}
+              hasMore={false}
+              onLoadMore={() => { }}
+            />
+          </div>
+
+          {/* Quick Actions */}
+          <div className="animate-slide-in-right" style={{ animationDelay: '500ms' }}>
+            <QuickActions />
+          </div>
         </div>
-      </div>
       </div>
     </PageBackground>
   );

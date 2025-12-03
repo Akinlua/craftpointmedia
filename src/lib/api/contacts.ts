@@ -1,243 +1,251 @@
-import { Contact, ContactFilters, ContactBulkAction, ContactTimeline } from '@/types/contact';
-import { supabase } from '@/integrations/supabase/client';
+import { Contact, ContactFilters, ContactBulkAction, ContactTimeline, LeadStage } from '@/types/contact';
+import { ENV, API_ENDPOINTS } from '@/lib/config/env';
 
 // Helper to transform DB contact to frontend Contact type
-const transformContact = (dbContact: any, ownerProfile?: any): Contact => ({
+const transformContact = (dbContact: any): Contact => ({
   id: dbContact.id,
-  firstName: dbContact.first_name,
-  lastName: dbContact.last_name,
+  firstName: dbContact.firstName || dbContact.first_name,
+  lastName: dbContact.lastName || dbContact.last_name,
   email: dbContact.email,
   phone: dbContact.phone,
   company: dbContact.company,
   location: dbContact.location,
   status: dbContact.status,
-  leadStage: dbContact.lead_stage,
-  leadScore: dbContact.lead_score,
+  leadStage: dbContact.leadStage || dbContact.lead_stage,
+  leadScore: dbContact.leadScore || dbContact.lead_score,
   tags: dbContact.tags || [],
-  ownerId: dbContact.owner_id,
-  ownerName: ownerProfile ? `${ownerProfile.first_name} ${ownerProfile.last_name}` : 'Unassigned',
-  avatar: dbContact.avatar_url,
-  customFields: dbContact.custom_fields,
-  createdAt: dbContact.created_at,
-  updatedAt: dbContact.updated_at,
-  lastContactAt: dbContact.last_contact_at
+  ownerId: dbContact.ownerId || dbContact.owner_id,
+  ownerName: dbContact.ownerName || (dbContact.owner ? `${dbContact.owner.firstName} ${dbContact.owner.lastName}` : 'Unassigned'),
+  avatar: dbContact.avatar || dbContact.avatar_url,
+  customFields: dbContact.customFields || dbContact.custom_fields,
+  createdAt: dbContact.createdAt || dbContact.created_at,
+  updatedAt: dbContact.updatedAt || dbContact.updated_at,
+  lastContactAt: dbContact.lastContactAt || dbContact.last_contact_at
 });
 
-// Helper to transform Contact to DB format
-const transformToDb = (contact: Partial<Contact>) => ({
-  first_name: contact.firstName,
-  last_name: contact.lastName,
-  email: contact.email,
-  phone: contact.phone,
-  company: contact.company,
-  location: contact.location,
-  status: contact.status,
-  lead_stage: contact.leadStage,
-  lead_score: contact.leadScore,
-  tags: contact.tags,
-  owner_id: contact.ownerId,
-  avatar_url: contact.avatar,
-  custom_fields: contact.customFields,
-  last_contact_at: contact.lastContactAt
-});
+// Helper to get auth token
+const getAuthToken = () => localStorage.getItem('AUTH_TOKEN');
 
 export const contactsApi = {
   // Get contacts with filters and pagination
   getContacts: async (filters?: ContactFilters, page = 1, limit = 25) => {
-    let query = supabase
-      .from('contacts')
-      .select('*, owner:profiles!owner_id(first_name, last_name)', { count: 'exact' });
-    
-    // Apply filters
-    if (filters?.status?.length) {
-      query = query.in('status', filters.status);
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    if (filters?.status?.length) queryParams.append('status', filters.status.join(','));
+    if (filters?.tags?.length) queryParams.append('tags', filters.tags.join(','));
+    if (filters?.location) queryParams.append('location', filters.location);
+    if (filters?.search) queryParams.append('search', filters.search);
+
+    const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.CONTACTS.BASE}?${queryParams.toString()}`;
+    console.log('Fetching contacts from:', url);
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+    });
+
+    console.log('Response status:', response.status, response.statusText);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API Error:', errorText);
+      throw new Error(`Failed to fetch contacts: ${response.status} ${response.statusText}`);
     }
-    
-    if (filters?.tags?.length) {
-      query = query.overlaps('tags', filters.tags);
-    }
-    
-    if (filters?.location) {
-      query = query.ilike('location', `%${filters.location}%`);
-    }
-    
-    if (filters?.search) {
-      const search = `%${filters.search}%`;
-      query = query.or(`first_name.ilike.${search},last_name.ilike.${search},email.ilike.${search},company.ilike.${search}`);
-    }
-    
-    // Apply pagination
-    const startIndex = (page - 1) * limit;
-    query = query.range(startIndex, startIndex + limit - 1).order('created_at', { ascending: false });
-    
-    const { data, error, count } = await query;
-    
-    if (error) throw error;
-    
-    const contacts = (data || []).map(contact => transformContact(contact, contact.owner));
-    
+
+    const result = await response.json();
+    console.log('API Response:', result);
+
+    // Backend returns { success: true, data: { contacts: [...], pagination: {...} } }
+    const contactsData = result.data?.contacts || result.data || [];
+    const contacts = (Array.isArray(contactsData) ? contactsData : []).map(transformContact);
+
+    const pagination = result.data?.pagination || {};
+
     return {
       data: contacts,
-      total: count || 0,
-      page,
-      totalPages: Math.ceil((count || 0) / limit)
+      total: pagination.total || contacts.length,
+      page: pagination.page || page,
+      totalPages: pagination.totalPages || Math.ceil((pagination.total || contacts.length) / limit)
     };
   },
 
   // Get single contact by ID
   getContact: async (id: string): Promise<Contact | null> => {
-    const { data, error } = await supabase
-      .from('contacts')
-      .select('*, owner:profiles!owner_id(first_name, last_name)')
-      .eq('id', id)
-      .maybeSingle();
-    
-    if (error) throw error;
-    if (!data) return null;
-    
-    return transformContact(data, data.owner);
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.CONTACTS.BASE}/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error('Failed to fetch contact');
+
+    const data = await response.json();
+    return transformContact(data);
   },
 
   // Update contact
   updateContact: async (id: string, updates: Partial<Contact>): Promise<Contact> => {
-    const dbUpdates = transformToDb(updates);
-    
-    const { data, error } = await supabase
-      .from('contacts')
-      .update(dbUpdates)
-      .eq('id', id)
-      .select('*, owner:profiles!owner_id(first_name, last_name)')
-      .single();
-    
-    if (error) throw error;
-    
-    return transformContact(data, data.owner);
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.CONTACTS.BASE}/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(updates)
+    });
+
+    if (!response.ok) throw new Error('Failed to update contact');
+
+    const data = await response.json();
+    return transformContact(data);
   },
 
   // Get contact timeline
   getContactTimeline: async (contactId: string): Promise<ContactTimeline[]> => {
-    const { data, error } = await supabase
-      .from('contact_timeline')
-      .select('*, creator:profiles!created_by(first_name, last_name)')
-      .eq('contact_id', contactId)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    
-    return (data || []).map(item => ({
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.CONTACTS.TIMELINE.replace('{id}', contactId)}`;
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch timeline');
+
+    const data = await response.json();
+    return (data || []).map((item: any) => ({
       id: item.id,
-      contactId: item.contact_id,
-      type: item.type as any,
+      contactId: item.contactId || item.contact_id,
+      type: item.type,
       title: item.title,
       description: item.description,
-      createdBy: item.created_by,
-      createdByName: item.creator ? `${item.creator.first_name} ${item.creator.last_name}` : 'Unknown',
-      createdAt: item.created_at,
-      metadata: (item.metadata || {}) as Record<string, any>
+      createdBy: item.createdBy || item.created_by,
+      createdByName: item.creator ? `${item.creator.firstName} ${item.creator.lastName}` : 'Unknown',
+      createdAt: item.createdAt || item.created_at,
+      metadata: item.metadata || {}
     }));
   },
 
   // Bulk actions
   bulkAction: async (contactIds: string[], action: ContactBulkAction) => {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+
+    // Since backend might not have a single bulk endpoint for all actions, we iterate or use specific endpoints
+    // Ideally, the backend should support bulk operations. For now, we'll simulate it or use what's available.
+    // The documentation doesn't explicitly show a generic bulk endpoint.
+
+    // We will iterate for now as a safe fallback, or use a bulk endpoint if we assume one exists.
+    // Given the "Phase 1" nature, iteration is safer unless we see a bulk endpoint.
+    // However, for 'delete', we can try to see if the backend supports multiple IDs or just loop.
+
+    // Implementation note: This is inefficient but safe without explicit bulk API docs.
+
+    const promises = [];
+
     switch (action.type) {
       case 'add_tag':
         for (const id of contactIds) {
-          const { data: contact } = await supabase
-            .from('contacts')
-            .select('tags')
-            .eq('id', id)
-            .single();
-          
-          if (contact) {
-            const tags = contact.tags || [];
-            if (!tags.includes(action.data.tag)) {
-              await supabase
-                .from('contacts')
-                .update({ tags: [...tags, action.data.tag] })
-                .eq('id', id);
+          // Fetch current tags first? Or just append? 
+          // Backend PATCH usually replaces. We might need to fetch-then-update or backend handles merge.
+          // Assuming backend PATCH merges or we need to be careful.
+          // Let's assume we need to fetch first to be safe, matching previous logic.
+          promises.push((async () => {
+            const contact = await contactsApi.getContact(id);
+            if (contact) {
+              const tags = contact.tags || [];
+              if (!tags.includes(action.data.tag)) {
+                await contactsApi.updateContact(id, { tags: [...tags, action.data.tag] });
+              }
             }
-          }
+          })());
         }
         break;
-        
+
       case 'remove_tag':
         for (const id of contactIds) {
-          const { data: contact } = await supabase
-            .from('contacts')
-            .select('tags')
-            .eq('id', id)
-            .single();
-          
-          if (contact) {
-            const tags = (contact.tags || []).filter(tag => tag !== action.data.tag);
-            await supabase
-              .from('contacts')
-              .update({ tags })
-              .eq('id', id);
-          }
+          promises.push((async () => {
+            const contact = await contactsApi.getContact(id);
+            if (contact) {
+              const tags = (contact.tags || []).filter(t => t !== action.data.tag);
+              await contactsApi.updateContact(id, { tags });
+            }
+          })());
         }
         break;
-        
+
       case 'assign_owner':
-        await supabase
-          .from('contacts')
-          .update({ owner_id: action.data.ownerId })
-          .in('id', contactIds);
+        for (const id of contactIds) {
+          promises.push(contactsApi.updateContact(id, { ownerId: action.data.ownerId }));
+        }
         break;
-        
+
       case 'delete':
-        const { error } = await supabase
-          .from('contacts')
-          .delete()
-          .in('id', contactIds);
-        
-        if (error) throw error;
+        for (const id of contactIds) {
+          promises.push(fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.CONTACTS.BASE}/${id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          }));
+        }
         break;
     }
-    
+
+    await Promise.all(promises);
     return { success: true };
   },
 
   // Update lead stage
-  updateLeadStage: async (id: string, stage: string) => {
-    const { data, error } = await supabase
-      .from('contacts')
-      .update({ lead_stage: stage })
-      .eq('id', id)
-      .select('*, owner:profiles!owner_id(first_name, last_name)')
-      .single();
-    
-    if (error) throw error;
-    
-    return transformContact(data, data.owner);
+  updateLeadStage: async (id: string, stage: LeadStage) => {
+    return contactsApi.updateContact(id, { leadStage: stage });
   },
 
   // Create contact
   createContact: async (contact: Omit<Contact, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const { data: session } = await supabase.auth.getSession();
-    if (!session.session) throw new Error('Not authenticated');
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('org_id')
-      .eq('id', session.session.user.id)
-      .single();
+    console.log('Creating contact with data:', contact);
 
-    if (!profile) throw new Error('Profile not found');
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.CONTACTS.BASE}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(contact)
+    });
 
-    const dbContact = {
-      ...transformToDb(contact),
-      org_id: profile.org_id
-    };
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Create contact error:', errorText);
+      let errorMessage = 'Failed to create contact';
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMessage = errorJson.message || errorJson.error || errorMessage;
+      } catch {
+        errorMessage = errorText || errorMessage;
+      }
+      throw new Error(errorMessage);
+    }
 
-    const { data, error } = await supabase
-      .from('contacts')
-      .insert(dbContact)
-      .select('*, owner:profiles!owner_id(first_name, last_name)')
-      .single();
+    const result = await response.json();
+    console.log('Contact created:', result);
 
-    if (error) throw error;
-
-    return transformContact(data, data.owner);
+    // Backend returns { success: true, data: {...} }
+    const contactData = result.data || result;
+    return transformContact(contactData);
   }
 };

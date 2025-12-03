@@ -30,7 +30,8 @@ import { Badge } from "@/components/ui/badge";
 import { Contact, ContactStatus, LeadStage } from "@/types/contact";
 import { contactsApi } from "@/lib/api/contacts";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/lib/hooks/useSession";
+import { ENV, API_ENDPOINTS } from "@/lib/config/env";
 import { X } from "lucide-react";
 
 const contactFormSchema = z.object({
@@ -40,8 +41,8 @@ const contactFormSchema = z.object({
   phone: z.string().optional(),
   company: z.string().optional(),
   location: z.string().optional(),
-  status: z.enum(['lead', 'customer', 'archived'] as const),
-  leadStage: z.enum(['new', 'contacted', 'proposal', 'closed'] as const).optional(),
+  status: z.enum(['active', 'inactive', 'archived'] as const),
+  stage: z.enum(['lead', 'qualified', 'proposal', 'negotiation', 'closed_won', 'closed_lost'] as const).optional(),
   ownerId: z.string().min(1, "Owner is required"),
 });
 
@@ -54,37 +55,37 @@ interface AddContactFormProps {
 
 export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
   const { toast } = useToast();
+  const { profile, organization } = useSession();
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string>("");
 
-  // Load users and current user
+  // Load users from backend API
   useEffect(() => {
-    const loadData = async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (session.session) {
-        setCurrentUserId(session.session.user.id);
-        
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('org_id')
-          .eq('id', session.session.user.id)
-          .single();
-        
-        if (profile) {
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, first_name, last_name')
-            .eq('org_id', profile.org_id);
-          
-          if (profiles) setUsers(profiles);
+    const loadUsers = async () => {
+      try {
+        const token = localStorage.getItem('AUTH_TOKEN');
+        if (!token) return;
+
+        const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.USERS.BASE}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          const usersData = result.data?.users || result;
+          setUsers(Array.isArray(usersData) ? usersData : []);
         }
+      } catch (error) {
+        console.error('Error loading users:', error);
       }
     };
-    loadData();
-  }, []);
+
+    if (open) {
+      loadUsers();
+    }
+  }, [open]);
 
   const form = useForm<ContactFormData>({
     resolver: zodResolver(contactFormSchema),
@@ -95,11 +96,18 @@ export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
       phone: "",
       company: "",
       location: "",
-      status: "lead",
-      leadStage: "new",
-      ownerId: currentUserId || "",
+      status: "active",
+      stage: "lead",
+      ownerId: profile?.id || "",
     },
   });
+
+  // Update ownerId when profile loads
+  useEffect(() => {
+    if (profile?.id && !form.getValues('ownerId')) {
+      form.setValue('ownerId', profile.id);
+    }
+  }, [profile, form]);
 
   const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && tagInput.trim()) {
@@ -118,8 +126,22 @@ export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
   const onSubmit = async (data: ContactFormData) => {
     try {
       setLoading(true);
-      
-      await contactsApi.createContact({
+
+      console.log('Profile data:', profile);
+      console.log('Organization ID:', profile?.org_id);
+
+      if (!profile?.org_id) {
+        toast({
+          title: "Error",
+          description: "Organization ID is missing. Please refresh the page and try again.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Create contact payload matching backend API schema
+      const contactPayload = {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
@@ -127,12 +149,17 @@ export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
         company: data.company || '',
         location: data.location || '',
         status: data.status,
-        leadStage: data.leadStage,
+        stage: data.stage || 'lead',
         ownerId: data.ownerId,
+        organizationId: profile.org_id, // Add organizationId from session
         tags,
-        ownerName: '', // Will be populated by the API
-        leadScore: 50
-      });
+        leadScore: 50,
+        source: 'manual' // Default source
+      };
+
+      console.log('Creating contact with payload:', contactPayload);
+
+      await contactsApi.createContact(contactPayload as any);
 
       toast({
         title: "Contact added",
@@ -142,14 +169,14 @@ export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
       onOpenChange(false);
       form.reset();
       setTags([]);
-      
+
       // Trigger a page refresh to show the new contact
       window.location.reload();
     } catch (error) {
       console.error('Error adding contact:', error);
       toast({
         title: "Error",
-        description: "Failed to add contact. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to add contact. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -183,7 +210,7 @@ export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="lastName"
@@ -227,7 +254,7 @@ export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="company"
@@ -271,8 +298,8 @@ export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="lead">Lead</SelectItem>
-                        <SelectItem value="customer">Customer</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
                         <SelectItem value="archived">Archived</SelectItem>
                       </SelectContent>
                     </Select>
@@ -283,10 +310,10 @@ export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
 
               <FormField
                 control={form.control}
-                name="leadStage"
+                name="stage"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Lead Stage</FormLabel>
+                    <FormLabel>Stage</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -294,10 +321,12 @@ export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="new">New</SelectItem>
-                        <SelectItem value="contacted">Contacted</SelectItem>
+                        <SelectItem value="lead">Lead</SelectItem>
+                        <SelectItem value="qualified">Qualified</SelectItem>
                         <SelectItem value="proposal">Proposal</SelectItem>
-                        <SelectItem value="closed">Closed</SelectItem>
+                        <SelectItem value="negotiation">Negotiation</SelectItem>
+                        <SelectItem value="closed_won">Closed Won</SelectItem>
+                        <SelectItem value="closed_lost">Closed Lost</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -321,7 +350,7 @@ export function AddContactForm({ open, onOpenChange }: AddContactFormProps) {
                     <SelectContent>
                       {users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
-                          {user.first_name} {user.last_name}
+                          {user.firstName || user.first_name} {user.lastName || user.last_name}
                         </SelectItem>
                       ))}
                     </SelectContent>

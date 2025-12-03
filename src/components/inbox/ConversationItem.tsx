@@ -51,9 +51,11 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
     .toUpperCase()
     .slice(0, 2);
 
-  const timeAgo = formatDistanceToNow(new Date(conversation.lastMessage.timestamp), {
-    addSuffix: false,
-  });
+  const timeAgo = conversation.lastMessage?.timestamp
+    ? formatDistanceToNow(new Date(conversation.lastMessage.timestamp), {
+      addSuffix: false,
+    })
+    : 'No messages';
 
   return (
     <div
@@ -106,7 +108,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
               {conversation.subject}
             </p>
           )}
-          
+
           {conversation.contactCompany && !conversation.subject && (
             <p className="text-xs text-muted-foreground mb-1 truncate">
               {conversation.contactCompany}
@@ -114,18 +116,20 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
           )}
 
           {/* Last Message */}
-          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-            {conversation.lastMessage.type === 'outbound' && 'You: '}
-            {conversation.lastMessage.content}
-          </p>
+          {conversation.lastMessage && (
+            <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+              {conversation.lastMessage.type === 'outbound' && 'You: '}
+              {conversation.lastMessage.content}
+            </p>
+          )}
 
           {/* Footer */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 flex-wrap">
               {/* Priority Badge */}
               {conversation.priority !== 'normal' && (
-                <Badge 
-                  variant="outline" 
+                <Badge
+                  variant="outline"
                   className={cn('text-xs px-1.5 py-0', getPriorityColor(conversation.priority))}
                 >
                   {conversation.priority}
@@ -138,7 +142,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
                   {tag}
                 </Badge>
               ))}
-              
+
               {conversation.tags.length > 2 && (
                 <Badge variant="secondary" className="text-xs px-1.5 py-0">
                   +{conversation.tags.length - 2}

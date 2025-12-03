@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,13 +37,23 @@ const DealsPage = () => {
     }
   };
 
-  const stages = [
-    { id: "new", title: "New", color: "bg-slate-100 dark:bg-slate-800" },
-    { id: "contacted", title: "Contacted", color: "bg-blue-100 dark:bg-blue-900" },
-    { id: "proposal", title: "Proposal", color: "bg-yellow-100 dark:bg-yellow-900" },
-    { id: "closed_won", title: "Closed Won", color: "bg-green-100 dark:bg-green-900" },
-    { id: "closed_lost", title: "Closed Lost", color: "bg-red-100 dark:bg-red-900" }
-  ];
+  // Extract unique stages from deals data
+  const stages = React.useMemo(() => {
+    const stageMap = new Map();
+
+    deals.forEach(deal => {
+      if (deal.stageId && !stageMap.has(deal.stageId)) {
+        stageMap.set(deal.stageId, {
+          id: deal.stageId,
+          title: deal.stage || 'Unknown',
+          color: "bg-slate-100 dark:bg-slate-800" // Default color, can be customized
+        });
+      }
+    });
+
+    // Convert map to array and sort by some logic if needed
+    return Array.from(stageMap.values());
+  }, [deals]);
 
   const getPriorityColor = (probability?: number) => {
     if (!probability) return "bg-muted text-muted-foreground";
@@ -54,7 +64,7 @@ const DealsPage = () => {
   };
 
   const getDealsForStage = (stageId: string) => {
-    return deals.filter(deal => deal.stage === stageId);
+    return deals.filter(deal => deal.stageId === stageId);
   };
 
   const getTotalValueForStage = (stageId: string) => {
@@ -73,18 +83,18 @@ const DealsPage = () => {
 
   const handleDrop = async (e: React.DragEvent, targetStage: string) => {
     e.preventDefault();
-    
+
     if (draggedDeal) {
       const deal = deals.find(d => d.id === draggedDeal);
       if (deal && deal.stage !== targetStage) {
         try {
           await dealsApi.updateDealStage(draggedDeal, targetStage);
-          
+
           toast({
             title: "Deal moved",
             description: `${deal.title} moved to ${stages.find(s => s.id === targetStage)?.title}`,
           });
-          
+
           loadDeals();
         } catch (error) {
           toast({
@@ -95,7 +105,7 @@ const DealsPage = () => {
         }
       }
     }
-    
+
     setDraggedDeal(null);
   };
 
@@ -120,7 +130,7 @@ const DealsPage = () => {
         {stages.map((stage) => {
           const stageDeals = getDealsForStage(stage.id);
           const totalValue = getTotalValueForStage(stage.id);
-          
+
           return (
             <Card key={stage.id} className="card-subtle">
               <CardContent className="p-4">
@@ -141,7 +151,7 @@ const DealsPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 min-h-[600px]">
         {stages.map((stage) => {
           const stageDeals = getDealsForStage(stage.id);
-          
+
           return (
             <div
               key={stage.id}
@@ -154,7 +164,7 @@ const DealsPage = () => {
                   {stage.title} ({stageDeals.length})
                 </h3>
               </div>
-              
+
               <div className="space-y-3">
                 {stageDeals.map((deal) => (
                   <Card
@@ -171,7 +181,7 @@ const DealsPage = () => {
                             {deal.contacts.map(c => c.name).join(', ')}
                           </p>
                         </div>
-                        
+
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1">
                             <DollarSign className="w-3 h-3 text-success" />
@@ -183,7 +193,7 @@ const DealsPage = () => {
                             {deal.probability}%
                           </Badge>
                         </div>
-                        
+
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Avatar className="h-6 w-6">
@@ -194,7 +204,7 @@ const DealsPage = () => {
                             <span className="text-xs text-muted-foreground">{deal.ownerName}</span>
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Calendar className="w-3 h-3" />
                           <span>Close: {deal.closeDate ? new Date(deal.closeDate).toLocaleDateString() : 'TBD'}</span>

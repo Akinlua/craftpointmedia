@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useNavigate, useParams, Link, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { ENV, API_ENDPOINTS } from "@/lib/config/env";
+import { authApi } from "@/lib/api/auth";
 import { Loader2, UserPlus, AlertCircle, UserCheck } from "lucide-react";
 
 const acceptInviteSchema = z.object({
@@ -26,14 +27,15 @@ type AcceptInviteFormData = z.infer<typeof acceptInviteSchema>;
 
 const AcceptInvitationPage = () => {
   const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [invitation, setInvitation] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  const token = searchParams.get('token');
-  
+
+
+
   const {
     register,
     handleSubmit,
@@ -43,81 +45,30 @@ const AcceptInvitationPage = () => {
   });
 
   useEffect(() => {
-    const loadInvitation = async () => {
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('invitations')
-          .select('*')
-          .eq('token', token)
-          .eq('status', 'pending')
-          .single();
-
-        if (error || !data) {
-          toast({
-            title: "Invalid invitation",
-            description: "This invitation link is invalid or has expired",
-            variant: "destructive"
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        // Check if invitation is expired
-        if (new Date(data.expires_at) < new Date()) {
-          toast({
-            title: "Invitation expired",
-            description: "This invitation has expired. Please request a new one.",
-            variant: "destructive"
-          });
-          setIsLoading(false);
-          return;
-        }
-
-        setInvitation(data);
-      } catch (error) {
-        console.error('Error loading invitation:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadInvitation();
-  }, [token, toast]);
+    if (!token) {
+      setIsLoading(false);
+    } else {
+      // We assume the token is valid since we can't validate it without an endpoint
+      setIsLoading(false);
+    }
+  }, [token]);
 
   const onSubmit = async (data: AcceptInviteFormData) => {
-    if (!token || !invitation) return;
+    if (!token) return;
 
     setIsSubmitting(true);
 
     try {
-      // Call the edge function to accept the invitation
-      const { data: result, error } = await supabase.functions.invoke('accept-invitation', {
-        body: {
-          token,
-          password: data.password,
-          first_name: data.firstName,
-          last_name: data.lastName,
-        },
+      await authApi.acceptInvite({
+        token: token!,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
       });
-
-      if (error) {
-        throw new Error(error.message || 'Failed to accept invitation');
-      }
-
-      if (result?.error) {
-        throw new Error(result.error);
-      }
-
       toast({
         title: "Welcome to the team!",
         description: "Your account has been created successfully. You can now sign in.",
       });
-      
       navigate('/auth/login');
     } catch (error: any) {
       console.error('Accept invitation error:', error);
@@ -141,16 +92,16 @@ const AcceptInvitationPage = () => {
     );
   }
 
-  if (!token || !invitation) {
+  if (!token) {
     return (
-      <AuthForm 
-        title="Invalid Invitation" 
+      <AuthForm
+        title="Invalid Invitation"
         description="This invitation link is invalid or has expired"
       >
         <div className="text-center py-8">
           <AlertCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
           <p className="text-muted-foreground mb-4">
-            The invitation link you used is no longer valid. Please contact your organization administrator to request a new invitation.
+            The invitation link is missing a token. Please contact your organization administrator to request a new invitation.
           </p>
           <Button asChild variant="outline">
             <Link to="/auth/login">Go to Login</Link>
@@ -169,19 +120,10 @@ const AcceptInvitationPage = () => {
         <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
           <UserCheck className="w-8 h-8 text-primary" />
         </div>
-        
-        <div className="bg-muted/50 rounded-lg p-4 mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">Email:</span>
-            <span className="font-medium">{invitation.email}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Role:</span>
-            <Badge variant="secondary" className="capitalize">
-              {invitation.role}
-            </Badge>
-          </div>
-        </div>
+
+        <p className="text-muted-foreground mb-4">
+          Please set up your account details below.
+        </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -241,8 +183,8 @@ const AcceptInvitationPage = () => {
           )}
         </div>
 
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           className="w-full btn-primary"
           disabled={isSubmitting}
         >

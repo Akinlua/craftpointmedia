@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Deal, DealStage } from "@/types/deal";
 import { useToast } from "@/hooks/use-toast";
 import { dealStages, dealsApi } from "@/lib/api/deals";
-import { supabase } from "@/integrations/supabase/client";
+import { contactsApi } from "@/lib/api/contacts";
+import { teamApi } from "@/lib/api/team";
 
 interface AddDealModalProps {
   open: boolean;
@@ -17,18 +18,18 @@ interface AddDealModalProps {
   preselectedStageId?: string;
 }
 
-export const AddDealModal = ({ 
-  open, 
-  onOpenChange, 
+export const AddDealModal = ({
+  open,
+  onOpenChange,
   preselectedContactId,
-  preselectedStageId 
+  preselectedStageId
 }: AddDealModalProps) => {
   const { toast } = useToast();
   const [contacts, setContacts] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     title: '',
     value: 0,
@@ -44,36 +45,33 @@ export const AddDealModal = ({
   // Load data on mount
   useEffect(() => {
     const loadData = async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (session.session) {
-        setCurrentUserId(session.session.user.id);
-        setFormData(prev => ({ ...prev, ownerId: session.session.user.id }));
-        
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('org_id')
-          .eq('id', session.session.user.id)
-          .single();
+      try {
+        // Fetch contacts
+        const contactsResult = await contactsApi.getContacts({}, 1, 100);
+        setContacts(contactsResult.data);
 
-        if (profile) {
-          // Load contacts
-          const { data: contactsData } = await supabase
-            .from('contacts')
-            .select('id, first_name, last_name, company')
-            .eq('org_id', profile.org_id);
-          if (contactsData) setContacts(contactsData);
+        // Fetch team members
+        const teamMembers = await teamApi.getTeamMembers();
+        setUsers(teamMembers);
 
-          // Load users
-          const { data: usersData } = await supabase
-            .from('profiles')
-            .select('id, first_name, last_name')
-            .eq('org_id', profile.org_id);
-          if (usersData) setUsers(usersData);
-        }
+        // Set current user (assuming we can get it from local storage or context, 
+        // for now defaulting to first user or empty if not found)
+        // In a real app, we'd use a useAuth hook
+        // For now, let's just leave ownerId empty if not set
+      } catch (error) {
+        console.error('Error loading data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load contacts or team members",
+          variant: "destructive"
+        });
       }
     };
-    loadData();
-  }, []);
+
+    if (open) {
+      loadData();
+    }
+  }, [open, toast]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -81,25 +79,26 @@ export const AddDealModal = ({
 
   const handleContactSelection = (contactId: string, checked: boolean) => {
     if (checked) {
+      // Backend only supports one contact, so we replace the selection
       setFormData(prev => ({
         ...prev,
-        contactIds: [...prev.contactIds, contactId]
+        contactIds: [contactId]
       }));
     } else {
       setFormData(prev => ({
         ...prev,
-        contactIds: prev.contactIds.filter(id => id !== contactId)
+        contactIds: []
       }));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title || !formData.value || formData.contactIds.length === 0) {
       toast({
         title: "Validation Error",
-        description: "Please fill in title, value, and select at least one contact",
+        description: "Please fill in title, value, and select a contact",
         variant: "destructive"
       });
       return;
@@ -107,10 +106,10 @@ export const AddDealModal = ({
 
     try {
       setLoading(true);
-      
+
       const selectedContacts = contacts.filter(c => formData.contactIds.includes(c.id));
       const owner = users.find(u => u.id === formData.ownerId);
-      
+
       const dealData = {
         title: formData.title,
         value: formData.value,
@@ -119,11 +118,11 @@ export const AddDealModal = ({
         stageId: formData.stage,
         probability: formData.probability,
         ownerId: formData.ownerId,
-        ownerName: owner ? `${owner.first_name} ${owner.last_name}` : '',
+        ownerName: owner ? `${owner.firstName} ${owner.lastName}` : '',
         contactIds: formData.contactIds,
         contacts: selectedContacts.map(c => ({
           id: c.id,
-          name: `${c.first_name} ${c.last_name}`
+          name: `${c.firstName} ${c.lastName}`
         })),
         closeDate: formData.closeDate || undefined,
         description: formData.description || undefined
@@ -183,7 +182,7 @@ export const AddDealModal = ({
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="value">Value *</Label>
               <Input
@@ -196,11 +195,11 @@ export const AddDealModal = ({
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label>Currency</Label>
-              <Select 
-                value={formData.currency} 
+              <Select
+                value={formData.currency}
                 onValueChange={(value) => handleInputChange('currency', value)}
               >
                 <SelectTrigger>
@@ -219,8 +218,8 @@ export const AddDealModal = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Stage</Label>
-              <Select 
-                value={formData.stage} 
+              <Select
+                value={formData.stage}
                 onValueChange={(value) => handleInputChange('stage', value)}
               >
                 <SelectTrigger>
@@ -235,22 +234,28 @@ export const AddDealModal = ({
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Deal Owner</Label>
-              <Select 
-                value={formData.ownerId} 
+              <Select
+                value={formData.ownerId}
                 onValueChange={(value) => handleInputChange('ownerId', value)}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select a team member" />
                 </SelectTrigger>
                 <SelectContent>
-                  {users.map(user => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.first_name} {user.last_name}
-                    </SelectItem>
-                  ))}
+                  {users.length === 0 ? (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      No team members available
+                    </div>
+                  ) : (
+                    users.map(user => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.firstName} {user.lastName}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -258,25 +263,26 @@ export const AddDealModal = ({
 
           {/* Contacts */}
           <div className="space-y-2">
-            <Label>Associated Contacts *</Label>
+            <Label>Associated Contact *</Label>
             <div className="max-h-32 overflow-y-auto border rounded-md p-2">
-                {contacts.length === 0 ? (
+              {contacts.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No contacts available</p>
               ) : (
                 contacts.map(contact => (
                   <div key={contact.id} className="flex items-center space-x-2 py-1">
                     <input
-                      type="checkbox"
+                      type="radio"
+                      name="contact"
                       id={`contact-${contact.id}`}
                       checked={formData.contactIds.includes(contact.id)}
                       onChange={(e) => handleContactSelection(contact.id, e.target.checked)}
                       className="rounded border-gray-300"
                     />
-                    <label 
+                    <label
                       htmlFor={`contact-${contact.id}`}
                       className="text-sm flex-1 cursor-pointer"
                     >
-                      {contact.first_name} {contact.last_name}
+                      {contact.firstName} {contact.lastName}
                       {contact.company && (
                         <span className="text-muted-foreground"> - {contact.company}</span>
                       )}
@@ -285,6 +291,7 @@ export const AddDealModal = ({
                 ))
               )}
             </div>
+            <p className="text-xs text-muted-foreground">Select one contact for this deal.</p>
           </div>
 
           {/* Additional Details */}
@@ -300,7 +307,7 @@ export const AddDealModal = ({
                 onChange={(e) => handleInputChange('probability', parseInt(e.target.value) || 0)}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="closeDate">Expected Close Date</Label>
               <Input

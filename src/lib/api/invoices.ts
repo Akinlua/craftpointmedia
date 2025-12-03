@@ -1,566 +1,361 @@
-import { Invoice, InvoiceFilters, CreateInvoiceData, UpdateInvoiceData, SendInvoiceData, ManualPaymentData, InvoiceActivity, InvoiceLineItem, InvoiceStatus } from '@/types/invoice';
-import { supabase } from '@/integrations/supabase/client';
+import { Invoice, InvoiceFilters, CreateInvoiceData, UpdateInvoiceData, SendInvoiceData } from '@/types/invoice';
+import { ENV, API_ENDPOINTS } from '@/lib/config/env';
 
-type DbInvoice = {
-  id: string;
-  org_id: string;
-  number: string;
-  status: string;
-  contact_id: string;
-  subtotal: number;
-  tax_total: number;
-  total: number;
-  currency: string;
-  notes: string | null;
-  terms: string | null;
-  due_date: string | null;
-  payment_terms: number | null;
-  sent_at: string | null;
-  paid_at: string | null;
-  created_at: string;
-  updated_at: string;
-  owner_id: string;
-};
+// Helper to get auth token
+const getAuthToken = () => localStorage.getItem('AUTH_TOKEN');
 
-type DbLineItem = {
-  id: string;
-  invoice_id: string;
-  product_id: string | null;
-  product_name: string;
-  description: string | null;
-  quantity: number;
-  unit_price: number;
-  tax_rate: number;
-  line_total: number;
-  created_at: string;
-};
-
-type DbActivity = {
-  id: string;
-  invoice_id: string;
-  type: string;
-  title: string;
-  description: string | null;
-  channel: string | null;
-  created_by: string;
-  created_at: string;
-  metadata: any;
-};
-
-function mapDbLineItem(item: DbLineItem): InvoiceLineItem {
-  return {
+// Helper to transform backend invoice data to frontend format
+const transformInvoice = (data: any): Invoice => ({
+  id: data.id,
+  orgId: data.organizationId || data.organization_id,
+  number: data.invoiceNumber || data.invoice_number || data.number,
+  status: data.status,
+  contactId: data.contactId || data.contact_id,
+  contactName: data.contact ? `${data.contact.firstName || data.contact.first_name || ''} ${data.contact.lastName || data.contact.last_name || ''}`.trim() : 'Unknown',
+  contactEmail: data.contact?.email,
+  lineItems: (data.items || []).map((item: any) => ({
     id: item.id,
-    productId: item.product_id || undefined,
-    productName: item.product_name,
-    description: item.description || undefined,
-    quantity: item.quantity,
-    unitPrice: item.unit_price,
-    taxRate: item.tax_rate,
-    lineTotal: item.line_total
-  };
-}
-
-function mapDbActivity(activity: DbActivity, createdByName: string): InvoiceActivity {
-  return {
-    id: activity.id,
-    invoiceId: activity.invoice_id,
-    type: activity.type as any,
-    title: activity.title,
-    description: activity.description || undefined,
-    channel: activity.channel as any,
-    createdBy: activity.created_by,
-    createdByName,
-    createdAt: activity.created_at,
-    metadata: activity.metadata
-  };
-}
-
-async function getOrgId(): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile) throw new Error('Profile not found');
-  return profile.org_id;
-}
-
-export async function getInvoices(filters?: InvoiceFilters): Promise<{ data: Invoice[]; total: number }> {
-  const orgId = await getOrgId();
-
-  let query = supabase
-    .from('invoices')
-    .select(`
-      *,
-      contacts:contact_id (first_name, last_name, email)
-    `, { count: 'exact' })
-    .eq('org_id', orgId);
-
-  if (filters?.status && filters.status.length > 0) {
-    query = query.in('status', filters.status);
-  }
-
-  if (filters?.contactId) {
-    query = query.eq('contact_id', filters.contactId);
-  }
-
-  if (filters?.ownerId) {
-    query = query.eq('owner_id', filters.ownerId);
-  }
-
-  if (filters?.search) {
-    query = query.or(`number.ilike.%${filters.search}%`);
-  }
-
-  query = query.order('created_at', { ascending: false });
-
-  const { data, error, count } = await query;
-
-  if (error) throw error;
-
-  // Fetch owner profiles
-  const ownerIds = [...new Set((data || []).map(inv => inv.owner_id))];
-  let ownersMap: Record<string, { first_name: string; last_name: string }> = {};
-  
-  if (ownerIds.length > 0) {
-    const { data: owners } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name')
-      .in('id', ownerIds);
-
-    ownersMap = (owners || []).reduce((acc, owner) => {
-      acc[owner.id] = owner;
-      return acc;
-    }, {} as Record<string, { first_name: string; last_name: string }>);
-  }
-
-  // Fetch line items for all invoices
-  const invoiceIds = (data || []).map(inv => inv.id);
-  let lineItemsMap: Record<string, InvoiceLineItem[]> = {};
-  
-  if (invoiceIds.length > 0) {
-    const { data: lineItems } = await supabase
-      .from('invoice_line_items')
-      .select('*')
-      .in('invoice_id', invoiceIds);
-
-    lineItemsMap = (lineItems || []).reduce((acc, item) => {
-      if (!acc[item.invoice_id]) acc[item.invoice_id] = [];
-      acc[item.invoice_id].push(mapDbLineItem(item));
-      return acc;
-    }, {} as Record<string, InvoiceLineItem[]>);
-  }
-
-  const invoices: Invoice[] = (data || []).map((inv: any) => {
-    const owner = ownersMap[inv.owner_id];
-    return {
-      id: inv.id,
-      orgId: inv.org_id,
-      number: inv.number,
-      status: inv.status as InvoiceStatus,
-      contactId: inv.contact_id,
-      contactName: inv.contacts ? `${inv.contacts.first_name} ${inv.contacts.last_name}` : 'Unknown',
-      contactEmail: inv.contacts?.email,
-      lineItems: lineItemsMap[inv.id] || [],
-      subtotal: inv.subtotal,
-      taxTotal: inv.tax_total,
-      total: inv.total,
-      currency: inv.currency,
-      notes: inv.notes || undefined,
-      terms: inv.terms || undefined,
-      dueDate: inv.due_date || undefined,
-      paymentTerms: inv.payment_terms || undefined,
-      sentAt: inv.sent_at || undefined,
-      paidAt: inv.paid_at || undefined,
-      createdAt: inv.created_at,
-      updatedAt: inv.updated_at,
-      ownerId: inv.owner_id,
-      ownerName: owner ? `${owner.first_name} ${owner.last_name}` : 'Unknown'
-    };
-  });
-
-  return { data: invoices, total: count || 0 };
-}
-
-export async function getInvoice(id: string): Promise<Invoice> {
-  const orgId = await getOrgId();
-
-  const { data: inv, error } = await supabase
-    .from('invoices')
-    .select(`
-      *,
-      contacts:contact_id (first_name, last_name, email)
-    `)
-    .eq('id', id)
-    .eq('org_id', orgId)
-    .single();
-
-  if (error) throw error;
-  if (!inv) throw new Error('Invoice not found');
-
-  // Fetch owner profile
-  const { data: owner } = await supabase
-    .from('profiles')
-    .select('first_name, last_name')
-    .eq('id', inv.owner_id)
-    .single();
-
-  // Fetch line items
-  const { data: lineItems } = await supabase
-    .from('invoice_line_items')
-    .select('*')
-    .eq('invoice_id', id);
-
-  return {
-    id: inv.id,
-    orgId: inv.org_id,
-    number: inv.number,
-    status: inv.status as InvoiceStatus,
-    contactId: inv.contact_id,
-    contactName: inv.contacts ? `${inv.contacts.first_name} ${inv.contacts.last_name}` : 'Unknown',
-    contactEmail: inv.contacts?.email,
-    lineItems: (lineItems || []).map(mapDbLineItem),
-    subtotal: inv.subtotal,
-    taxTotal: inv.tax_total,
-    total: inv.total,
-    currency: inv.currency,
-    notes: inv.notes || undefined,
-    terms: inv.terms || undefined,
-    dueDate: inv.due_date || undefined,
-    paymentTerms: inv.payment_terms || undefined,
-    sentAt: inv.sent_at || undefined,
-    paidAt: inv.paid_at || undefined,
-    createdAt: inv.created_at,
-    updatedAt: inv.updated_at,
-    ownerId: inv.owner_id,
-    ownerName: owner ? `${owner.first_name} ${owner.last_name}` : 'Unknown'
-  };
-}
-
-export async function createInvoice(data: CreateInvoiceData): Promise<Invoice> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-
-  const orgId = await getOrgId();
-
-  // Calculate totals
-  const lineItems = data.lineItems.map(item => ({
-    ...item,
-    lineTotal: Math.round(item.quantity * item.unitPrice * (1 + item.taxRate / 100))
-  }));
-
-  const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  const taxTotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice * item.taxRate / 100), 0);
-  const total = subtotal + taxTotal;
-
-  // Get the next invoice number
-  const { data: lastInvoice } = await supabase
-    .from('invoices')
-    .select('number')
-    .eq('org_id', orgId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-
-  let nextNumber = 1;
-  if (lastInvoice?.number) {
-    const match = lastInvoice.number.match(/\d+$/);
-    if (match) {
-      nextNumber = parseInt(match[0]) + 1;
-    }
-  }
-  const invoiceNumber = `INV-${String(nextNumber).padStart(6, '0')}`;
-
-  // Create invoice
-  const { data: invoice, error: invoiceError } = await supabase
-    .from('invoices')
-    .insert({
-      org_id: orgId,
-      number: invoiceNumber,
-      status: 'draft',
-      contact_id: data.contactId,
-      subtotal: Math.round(subtotal),
-      tax_total: Math.round(taxTotal),
-      total: Math.round(total),
-      currency: 'USD',
-      notes: data.notes,
-      terms: data.terms,
-      due_date: data.dueDate,
-      payment_terms: data.paymentTerms,
-      owner_id: user.id
-    })
-    .select()
-    .single();
-
-  if (invoiceError) throw invoiceError;
-
-  // Create line items
-  const lineItemsToInsert = lineItems.map(item => ({
-    invoice_id: invoice.id,
-    product_id: item.productId,
-    product_name: item.productName,
+    productId: item.productId || item.product_id,
+    productName: item.productName || item.product_name || item.description,
     description: item.description,
     quantity: item.quantity,
-    unit_price: item.unitPrice,
-    tax_rate: item.taxRate,
-    line_total: item.lineTotal
-  }));
+    unitPrice: parseFloat(item.unitPrice || item.unit_price || 0),
+    taxRate: parseFloat(item.taxRate || item.tax_rate || 0),
+    lineTotal: parseFloat(item.lineTotal || item.line_total || 0)
+  })),
+  subtotal: parseFloat(data.subtotal || 0),
+  taxTotal: parseFloat(data.tax || data.tax_total || 0),
+  total: parseFloat(data.total || 0),
+  currency: data.currency || 'USD',
+  notes: data.notes,
+  terms: data.terms,
+  dueDate: data.dueDate || data.due_date,
+  paymentTerms: data.paymentTerms || data.payment_terms,
+  sentAt: data.sentAt || data.sent_at,
+  paidAt: data.paidAt || data.paid_at,
+  createdAt: data.createdAt || data.created_at,
+  updatedAt: data.updatedAt || data.updated_at,
+  ownerId: data.createdBy || data.created_by || data.owner_id,
+  ownerName: data.creator ? `${data.creator.firstName || data.creator.first_name || ''} ${data.creator.lastName || data.creator.last_name || ''}`.trim() : 'Unknown'
+});
 
-  const { error: lineItemsError } = await supabase
-    .from('invoice_line_items')
-    .insert(lineItemsToInsert);
+/**
+ * Get invoice statistics
+ * GET /invoices/stats
+ */
+export async function getInvoiceStats(): Promise<{
+  statusBreakdown: any[];
+  totals: {
+    totalInvoices: number;
+    totalValue: number;
+    totalPaid: number;
+    averageValue: number;
+    overdueCount: number;
+  };
+}> {
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
 
-  if (lineItemsError) throw lineItemsError;
+  console.log('Fetching invoice stats from:', `${ENV.API_BASE_URL}${API_ENDPOINTS.INVOICES.STATS}`);
 
-  // Create activity
-  await supabase
-    .from('invoice_activities')
-    .insert({
-      invoice_id: invoice.id,
-      type: 'created',
-      title: 'Invoice created',
-      created_by: user.id
-    });
+  const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.INVOICES.STATS}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 
-  return getInvoice(invoice.id);
-}
-
-export async function updateInvoice(data: UpdateInvoiceData): Promise<Invoice> {
-  const { id, lineItems, ...updateData } = data;
-  const orgId = await getOrgId();
-
-  // Build update object
-  const dbUpdate: any = {};
-  if (updateData.contactId !== undefined) dbUpdate.contact_id = updateData.contactId;
-  if (updateData.notes !== undefined) dbUpdate.notes = updateData.notes;
-  if (updateData.terms !== undefined) dbUpdate.terms = updateData.terms;
-  if (updateData.dueDate !== undefined) dbUpdate.due_date = updateData.dueDate;
-  if (updateData.paymentTerms !== undefined) dbUpdate.payment_terms = updateData.paymentTerms;
-  if (updateData.status !== undefined) dbUpdate.status = updateData.status;
-
-  // If line items changed, recalculate totals
-  if (lineItems) {
-    const items = lineItems.map(item => ({
-      ...item,
-      lineTotal: Math.round(item.quantity * item.unitPrice * (1 + item.taxRate / 100))
-    }));
-
-    const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-    const taxTotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice * item.taxRate / 100), 0);
-    const total = subtotal + taxTotal;
-
-    dbUpdate.subtotal = Math.round(subtotal);
-    dbUpdate.tax_total = Math.round(taxTotal);
-    dbUpdate.total = Math.round(total);
-
-    // Delete existing line items and insert new ones
-    await supabase
-      .from('invoice_line_items')
-      .delete()
-      .eq('invoice_id', id);
-
-    const lineItemsToInsert = items.map(item => ({
-      invoice_id: id,
-      product_id: item.productId,
-      product_name: item.productName,
-      description: item.description,
-      quantity: item.quantity,
-      unit_price: item.unitPrice,
-      tax_rate: item.taxRate,
-      line_total: item.lineTotal
-    }));
-
-    await supabase
-      .from('invoice_line_items')
-      .insert(lineItemsToInsert);
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Get invoice stats error:', errorText);
+    throw new Error(`Failed to fetch invoice stats: ${response.status}`);
   }
 
-  // Update invoice
-  const { error } = await supabase
-    .from('invoices')
-    .update(dbUpdate)
-    .eq('id', id)
-    .eq('org_id', orgId);
+  const result = await response.json();
+  console.log('Invoice stats response:', result);
 
-  if (error) throw error;
-
-  return getInvoice(id);
+  const data = result.data || result;
+  return {
+    statusBreakdown: data.statusBreakdown || [],
+    totals: {
+      totalInvoices: parseInt(data.totals?.totalInvoices || 0),
+      totalValue: parseFloat(data.totals?.totalValue || 0),
+      totalPaid: parseFloat(data.totals?.totalPaid || 0),
+      averageValue: parseFloat(data.totals?.averageValue || 0),
+      overdueCount: parseInt(data.totals?.overdueCount || 0)
+    }
+  };
 }
 
+/**
+ * Get invoices with optional filters
+ * GET /invoices
+ */
+export async function getInvoices(filters?: InvoiceFilters): Promise<{ data: Invoice[]; total: number }> {
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const queryParams = new URLSearchParams({
+    page: '1',
+    limit: '100', // Get all invoices for now
+  });
+
+  if (filters?.status && filters.status.length > 0) {
+    queryParams.append('status', filters.status.join(','));
+  }
+  if (filters?.contactId) {
+    queryParams.append('contactId', filters.contactId);
+  }
+  if (filters?.search) {
+    queryParams.append('search', filters.search);
+  }
+
+  const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.INVOICES.BASE}?${queryParams.toString()}`;
+  console.log('Fetching invoices from:', url);
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Get invoices error:', errorText);
+    throw new Error(`Failed to fetch invoices: ${response.status}`);
+  }
+
+  const result = await response.json();
+  console.log('Invoices response:', result);
+
+  const invoicesData = result.data?.invoices || result.data || [];
+  const invoices = (Array.isArray(invoicesData) ? invoicesData : []).map(transformInvoice);
+
+  const pagination = result.data?.meta?.pagination || {};
+  const total = pagination.total || invoices.length;
+
+  return { data: invoices, total };
+}
+
+/**
+ * Get single invoice by ID
+ * GET /invoices/:id
+ */
+export async function getInvoice(id: string): Promise<Invoice> {
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.INVOICES.BASE}/${id}`;
+  console.log('Fetching invoice from:', url);
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Get invoice error:', errorText);
+    throw new Error(`Failed to fetch invoice: ${response.status}`);
+  }
+
+  const result = await response.json();
+  console.log('Invoice response:', result);
+
+  const invoiceData = result.data || result;
+  return transformInvoice(invoiceData);
+}
+
+/**
+ * Create new invoice
+ * POST /invoices
+ */
+export async function createInvoice(data: CreateInvoiceData): Promise<Invoice> {
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const payload = {
+    contactId: data.contactId,
+    items: data.lineItems.map(item => ({
+      description: item.description || item.productName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      taxRate: item.taxRate || 0
+    })),
+    dueDate: data.dueDate,
+    notes: data.notes,
+    terms: data.terms,
+    paymentTerms: data.paymentTerms ? String(data.paymentTerms) : undefined
+  };
+
+  console.log('Creating invoice with payload:', payload);
+
+  const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.INVOICES.BASE}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Create invoice error:', errorText);
+    let errorMessage = 'Failed to create invoice';
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorMessage = errorJson.message || errorJson.error || errorMessage;
+    } catch {
+      errorMessage = errorText || errorMessage;
+    }
+    throw new Error(errorMessage);
+  }
+
+  const result = await response.json();
+  console.log('Invoice created:', result);
+
+  const invoiceData = result.data || result;
+  return transformInvoice(invoiceData);
+}
+
+/**
+ * Update existing invoice
+ * PATCH /invoices/:id
+ */
+export async function updateInvoice(data: UpdateInvoiceData): Promise<Invoice> {
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const { id, lineItems, ...updateData } = data;
+
+  const payload: any = {};
+  if (updateData.contactId !== undefined) payload.contactId = updateData.contactId;
+  if (updateData.notes !== undefined) payload.notes = updateData.notes;
+  if (updateData.terms !== undefined) payload.terms = updateData.terms;
+  if (updateData.dueDate !== undefined) payload.dueDate = updateData.dueDate;
+  if (updateData.paymentTerms !== undefined) payload.paymentTerms = String(updateData.paymentTerms);
+  if (updateData.status !== undefined) payload.status = updateData.status;
+
+  if (lineItems) {
+    payload.items = lineItems.map(item => ({
+      description: item.description || item.productName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      taxRate: item.taxRate || 0
+    }));
+  }
+
+  console.log('Updating invoice with payload:', payload);
+
+  const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.INVOICES.BASE}/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Update invoice error:', errorText);
+    throw new Error(`Failed to update invoice: ${response.status}`);
+  }
+
+  const result = await response.json();
+  console.log('Invoice updated:', result);
+
+  const invoiceData = result.data || result;
+  return transformInvoice(invoiceData);
+}
+
+/**
+ * Send invoice to contact
+ * POST /invoices/:id/send
+ */
 export async function sendInvoice(data: SendInvoiceData): Promise<void> {
-  const orgId = await getOrgId();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
 
-  const { error } = await supabase
-    .from('invoices')
-    .update({
-      status: 'sent',
-      sent_at: new Date().toISOString()
-    })
-    .eq('id', data.invoiceId)
-    .eq('org_id', orgId);
+  const payload = {
+    channels: data.channels,
+    customMessage: data.customMessage,
+    template: data.template
+  };
 
-  if (error) throw error;
+  const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.INVOICES.SEND.replace('{id}', data.invoiceId)}`;
+  console.log('Sending invoice:', url, payload);
 
-  // Create activity
-  await supabase
-    .from('invoice_activities')
-    .insert({
-      invoice_id: data.invoiceId,
-      type: 'sent',
-      title: `Invoice sent via ${data.channels.join(', ')}`,
-      channel: data.channels[0],
-      created_by: user.id
-    });
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Send invoice error:', errorText);
+    throw new Error(`Failed to send invoice: ${response.status}`);
+  }
+
+  console.log('Invoice sent successfully');
 }
 
-export async function markInvoiceAsPaid(invoiceId: string, paymentData?: ManualPaymentData): Promise<void> {
-  const orgId = await getOrgId();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-
-  const { error } = await supabase
-    .from('invoices')
-    .update({
-      status: 'paid',
-      paid_at: paymentData?.paymentDate || new Date().toISOString()
-    })
-    .eq('id', invoiceId)
-    .eq('org_id', orgId);
-
-  if (error) throw error;
-
-  // Create activity
-  await supabase
-    .from('invoice_activities')
-    .insert({
-      invoice_id: invoiceId,
-      type: 'paid',
-      title: 'Payment received',
-      description: paymentData?.paymentMethod || 'Manual payment',
-      created_by: user.id,
-      metadata: paymentData ? {
-        amount: paymentData.amount,
-        method: paymentData.paymentMethod,
-        reference: paymentData.reference
-      } : {}
-    });
-}
-
-export async function deleteInvoice(id: string): Promise<void> {
-  const orgId = await getOrgId();
-
-  const { error } = await supabase
-    .from('invoices')
-    .delete()
-    .eq('id', id)
-    .eq('org_id', orgId);
-
-  if (error) throw error;
-}
-
-export async function getInvoiceActivities(invoiceId: string): Promise<InvoiceActivity[]> {
-  const orgId = await getOrgId();
-
-  // Verify invoice belongs to org
-  const { data: invoice } = await supabase
-    .from('invoices')
-    .select('id')
-    .eq('id', invoiceId)
-    .eq('org_id', orgId)
-    .single();
-
-  if (!invoice) throw new Error('Invoice not found');
-
-  const { data, error } = await supabase
-    .from('invoice_activities')
-    .select(`
-      *,
-      profiles:created_by (first_name, last_name)
-    `)
-    .eq('invoice_id', invoiceId)
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-
-  return (data || []).map((activity: any) => {
-    const createdByName = activity.profiles 
-      ? `${activity.profiles.first_name} ${activity.profiles.last_name}` 
-      : activity.created_by === 'system' ? 'System' : 'Unknown';
-    return mapDbActivity(activity, createdByName);
+/**
+ * Mark invoice as paid (using update endpoint)
+ */
+export async function markInvoiceAsPaid(invoiceId: string): Promise<void> {
+  await updateInvoice({
+    id: invoiceId,
+    status: 'paid'
   });
 }
 
-export async function generateInvoicePdfUrl(invoiceId: string): Promise<string> {
-  // Return a stub PDF URL for now
-  return `${window.location.origin}/api/invoices/${invoiceId}/pdf`;
+/**
+ * Delete invoice
+ * DELETE /invoices/:id
+ */
+export async function deleteInvoice(id: string): Promise<void> {
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.INVOICES.BASE}/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Delete invoice error:', errorText);
+    throw new Error(`Failed to delete invoice: ${response.status}`);
+  }
+
+  console.log('Invoice deleted successfully');
 }
 
+/**
+ * Bulk update invoices (implemented as sequential calls since no bulk endpoint exists)
+ */
 export async function bulkUpdateInvoices(action: 'send' | 'mark_paid' | 'delete', invoiceIds: string[]): Promise<void> {
-  const orgId = await getOrgId();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
+  const promises = invoiceIds.map(async (id) => {
+    try {
+      if (action === 'delete') {
+        await deleteInvoice(id);
+      } else if (action === 'mark_paid') {
+        await markInvoiceAsPaid(id);
+      } else if (action === 'send') {
+        await sendInvoice({ invoiceId: id, channels: ['email'] });
+      }
+    } catch (error) {
+      console.error(`Failed to ${action} invoice ${id}:`, error);
+      throw error;
+    }
+  });
 
-  if (action === 'delete') {
-    const { error } = await supabase
-      .from('invoices')
-      .delete()
-      .in('id', invoiceIds)
-      .eq('org_id', orgId);
+  await Promise.all(promises);
+}
 
-    if (error) throw error;
-  } else if (action === 'send') {
-    const { error } = await supabase
-      .from('invoices')
-      .update({
-        status: 'sent',
-        sent_at: new Date().toISOString()
-      })
-      .in('id', invoiceIds)
-      .eq('org_id', orgId)
-      .eq('status', 'draft');
-
-    if (error) throw error;
-
-    // Create activities
-    const activities = invoiceIds.map(id => ({
-      invoice_id: id,
-      type: 'sent',
-      title: 'Invoice sent',
-      created_by: user.id
-    }));
-
-    await supabase
-      .from('invoice_activities')
-      .insert(activities);
-  } else if (action === 'mark_paid') {
-    const { error } = await supabase
-      .from('invoices')
-      .update({
-        status: 'paid',
-        paid_at: new Date().toISOString()
-      })
-      .in('id', invoiceIds)
-      .eq('org_id', orgId)
-      .in('status', ['sent', 'overdue']);
-
-    if (error) throw error;
-
-    // Create activities
-    const activities = invoiceIds.map(id => ({
-      invoice_id: id,
-      type: 'paid',
-      title: 'Payment received',
-      created_by: user.id
-    }));
-
-    await supabase
-      .from('invoice_activities')
-      .insert(activities);
-  }
+/**
+ * Generate PDF URL (stub - not available in backend)
+ */
+export async function generateInvoicePdfUrl(invoiceId: string): Promise<string> {
+  return `${ENV.API_BASE_URL}${API_ENDPOINTS.INVOICES.BASE}/${invoiceId}/pdf`;
 }

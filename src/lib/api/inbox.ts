@@ -1,381 +1,418 @@
-import { Conversation, Message, ConversationFilters, MessageTemplate, ConversationMerge } from '@/types/conversation';
+import { Conversation, Message, ConversationFilters, MessageTemplate } from '@/types/conversation';
+import { ENV, API_ENDPOINTS } from '@/lib/config/env';
 
-// Mock data for development
-const mockConversations: Conversation[] = [
-  {
-    id: '1',
-    contactId: 'c1',
-    contactName: 'John Smith',
-    contactCompany: 'Acme Corp',
-    channel: 'email',
-    status: 'open',
-    subject: 'Enterprise Software Proposal',
-    lastMessage: {
-      id: 'm1',
-      content: 'Thanks for the detailed proposal. I have a few questions about the implementation timeline...',
-      timestamp: '2024-01-15T14:30:00Z',
-      type: 'inbound',
-      fromName: 'John Smith',
-    },
-    unreadCount: 1,
-    assignedTo: {
-      id: 'u1',
-      name: 'Sarah Johnson',
-      avatar: '/avatars/sarah.jpg',
-    },
-    tags: ['enterprise', 'high-value'],
-    priority: 'high',
-    slaDeadline: '2024-01-15T16:30:00Z',
-    isOverdue: false,
-    createdAt: '2024-01-10T09:00:00Z',
-    updatedAt: '2024-01-15T14:30:00Z',
-    orgId: 'org1',
-  },
-  {
-    id: '2',
-    contactId: 'c2',
-    contactName: 'Emily Wilson',
-    contactCompany: 'TechStart Inc',
-    channel: 'sms',
-    status: 'open',
-    lastMessage: {
-      id: 'm2',
-      content: 'Hi! Just wanted to follow up on our conversation yesterday. Are you free for a quick call this afternoon?',
-      timestamp: '2024-01-15T13:45:00Z',
-      type: 'inbound',
-      fromName: 'Emily Wilson',
-    },
-    unreadCount: 2,
-    tags: ['follow-up'],
-    priority: 'normal',
-    slaDeadline: '2024-01-15T17:45:00Z',
-    isOverdue: false,
-    createdAt: '2024-01-14T11:00:00Z',
-    updatedAt: '2024-01-15T13:45:00Z',
-    orgId: 'org1',
-  },
-  {
-    id: '3',
-    contactId: 'c3',
-    contactName: 'Mike Davis',
-    contactCompany: 'Global Tech',
-    channel: 'email',
-    status: 'pending',
-    subject: 'Contract Review Feedback',
-    lastMessage: {
-      id: 'm3',
-      content: 'I\'ve reviewed the contract and everything looks good. Just need to check with legal on a few clauses...',
-      timestamp: '2024-01-15T12:00:00Z',
-      type: 'outbound',
-      fromName: 'You',
-    },
-    unreadCount: 0,
-    assignedTo: {
-      id: 'u2',
-      name: 'Alex Chen',
-      avatar: '/avatars/alex.jpg',
-    },
-    tags: ['contract', 'legal'],
-    priority: 'normal',
-    isOverdue: false,
-    createdAt: '2024-01-12T08:30:00Z',
-    updatedAt: '2024-01-15T12:00:00Z',
-    orgId: 'org1',
-  },
-];
+// Helper to get auth token
+const getAuthToken = () => localStorage.getItem('AUTH_TOKEN');
 
-const mockMessages: Record<string, Message[]> = {
-  '1': [
-    {
-      id: 'm1-1',
-      conversationId: '1',
-      content: 'Hi John, thank you for your interest in our enterprise solution. I\'ve prepared a detailed proposal that covers all your requirements.',
-      type: 'outbound',
-      channel: 'email',
-      fromEmail: 'sarah@company.com',
-      fromName: 'Sarah Johnson',
-      toEmail: 'john@acmecorp.com',
-      toName: 'John Smith',
-      timestamp: '2024-01-10T10:00:00Z',
-      isRead: true,
-      attachments: [
-        {
-          id: 'att1',
-          name: 'Enterprise_Proposal_v2.pdf',
-          size: 2048576,
-          mimeType: 'application/pdf',
-          url: '/attachments/proposal.pdf',
-        },
-      ],
-      metadata: {
-        emailHeaders: {
-          'message-id': '<msg123@company.com>',
-          'in-reply-to': '<original@acmecorp.com>',
-        },
-        deliveryStatus: 'delivered',
-      },
-      createdAt: '2024-01-10T10:00:00Z',
-    },
-    {
-      id: 'm1-2',
-      conversationId: '1',
-      content: 'Thanks for the detailed proposal. I have a few questions about the implementation timeline and the pricing structure. Can we schedule a call this week?',
-      type: 'inbound',
-      channel: 'email',
-      fromEmail: 'john@acmecorp.com',
-      fromName: 'John Smith',
-      toEmail: 'sarah@company.com',
-      toName: 'Sarah Johnson',
-      timestamp: '2024-01-15T14:30:00Z',
-      isRead: false,
-      attachments: [],
-      metadata: {
-        emailHeaders: {
-          'message-id': '<reply456@acmecorp.com>',
-        },
-        deliveryStatus: 'delivered',
-      },
-      createdAt: '2024-01-15T14:30:00Z',
-    },
-  ],
-  '2': [
-    {
-      id: 'm2-1',
-      conversationId: '2',
-      content: 'Hi Emily! Great meeting you at the conference. Let\'s continue our discussion about your CRM needs.',
-      type: 'outbound',
-      channel: 'sms',
-      fromPhone: '+1-555-123-4567',
-      fromName: 'You',
-      toPhone: '+1-555-987-6543',
-      toName: 'Emily Wilson',
-      timestamp: '2024-01-14T11:30:00Z',
-      isRead: true,
-      attachments: [],
-      metadata: {
-        smsProvider: 'twilio',
-        deliveryStatus: 'delivered',
-      },
-      createdAt: '2024-01-14T11:30:00Z',
-    },
-    {
-      id: 'm2-2',
-      conversationId: '2',
-      content: 'Hi! Just wanted to follow up on our conversation yesterday. Are you free for a quick call this afternoon?',
-      type: 'inbound',
-      channel: 'sms',
-      fromPhone: '+1-555-987-6543',
-      fromName: 'Emily Wilson',
-      toPhone: '+1-555-123-4567',
-      toName: 'You',
-      timestamp: '2024-01-15T13:45:00Z',
-      isRead: false,
-      attachments: [],
-      metadata: {
-        smsProvider: 'twilio',
-        deliveryStatus: 'delivered',
-      },
-      createdAt: '2024-01-15T13:45:00Z',
-    },
-  ],
-};
+// Helper to transform backend conversation to frontend format
+const transformConversation = (data: any): Conversation => ({
+  id: data.id,
+  contactId: data.contactId || data.contact_id,
+  contactName: data.contactName || data.contact_name || 'Unknown',
+  contactCompany: data.contactCompany || data.contact_company,
+  channel: data.channel,
+  status: data.status,
+  subject: data.subject,
+  lastMessage: data.lastMessage || data.last_message ? {
+    id: data.lastMessage?.id || data.last_message?.id,
+    content: data.lastMessage?.content || data.last_message?.content,
+    timestamp: data.lastMessage?.timestamp || data.last_message?.timestamp,
+    type: data.lastMessage?.type || data.last_message?.type,
+    fromName: data.lastMessage?.fromName || data.last_message?.from_name,
+  } : undefined,
+  unreadCount: data.unreadCount || data.unread_count || 0,
+  assignedTo: data.assignedTo || data.assigned_to ? {
+    id: data.assignedTo?.id || data.assigned_to?.id,
+    name: data.assignedTo?.name || data.assigned_to?.name,
+    avatar: data.assignedTo?.avatar || data.assigned_to?.avatar,
+  } : undefined,
+  tags: data.tags || [],
+  priority: data.priority,
+  slaDeadline: data.slaDeadline || data.sla_deadline,
+  isOverdue: data.isOverdue || data.is_overdue || false,
+  createdAt: data.createdAt || data.created_at,
+  updatedAt: data.updatedAt || data.updated_at,
+  orgId: data.orgId || data.org_id || data.organizationId || data.organization_id,
+});
 
-const mockTemplates: MessageTemplate[] = [
-  {
-    id: 't1',
-    name: 'Welcome Email',
-    subject: 'Welcome to {{company.name}}!',
-    content: 'Hi {{contact.firstName}},\n\nWelcome to our platform! We\'re excited to help you grow your business.\n\nBest regards,\n{{user.name}}',
-    channel: 'email',
-    variables: ['contact.firstName', 'company.name', 'user.name'],
-    category: 'onboarding',
-    orgId: 'org1',
-  },
-  {
-    id: 't2',
-    name: 'Follow-up SMS',
-    content: 'Hi {{contact.firstName}}, just following up on our conversation. Let me know if you have any questions!',
-    channel: 'sms',
-    variables: ['contact.firstName'],
-    category: 'follow-up',
-    orgId: 'org1',
-  },
-];
+// Helper to transform backend message to frontend format
+const transformMessage = (data: any): Message => ({
+  id: data.id,
+  conversationId: data.conversationId || data.conversation_id,
+  content: data.content,
+  type: data.type,
+  channel: data.channel,
+  fromEmail: data.fromEmail || data.from_email,
+  fromName: data.fromName || data.from_name,
+  fromPhone: data.fromPhone || data.from_phone,
+  toEmail: data.toEmail || data.to_email,
+  toName: data.toName || data.to_name,
+  toPhone: data.toPhone || data.to_phone,
+  timestamp: data.timestamp || data.created_at,
+  isRead: data.isRead || data.is_read || false,
+  attachments: data.attachments || [],
+  metadata: data.metadata || {},
+  createdAt: data.createdAt || data.created_at,
+});
 
+/**
+ * Fetch conversations with optional filters
+ * GET /inbox/conversations
+ */
 export async function fetchConversations(filters: ConversationFilters = {}): Promise<Conversation[]> {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  let filtered = [...mockConversations];
-  
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const queryParams = new URLSearchParams();
+
   if (filters.channels && filters.channels.length > 0) {
-    filtered = filtered.filter(c => filters.channels!.includes(c.channel));
+    queryParams.append('channel', filters.channels.join(','));
   }
-  
   if (filters.status && filters.status.length > 0) {
-    filtered = filtered.filter(c => filters.status!.includes(c.status));
+    queryParams.append('status', filters.status.join(','));
   }
-  
   if (filters.unreadOnly) {
-    filtered = filtered.filter(c => c.unreadCount > 0);
+    queryParams.append('unreadOnly', 'true');
   }
-  
   if (filters.assignedTo && filters.assignedTo.length > 0) {
-    filtered = filtered.filter(c => 
-      c.assignedTo && filters.assignedTo!.includes(c.assignedTo.id)
-    );
+    queryParams.append('assignedTo', filters.assignedTo.join(','));
   }
-  
   if (filters.tags && filters.tags.length > 0) {
-    filtered = filtered.filter(c => 
-      c.tags.some(tag => filters.tags!.includes(tag))
-    );
+    queryParams.append('tags', filters.tags.join(','));
   }
-  
   if (filters.search) {
-    const searchTerm = filters.search.toLowerCase();
-    filtered = filtered.filter(c => 
-      c.contactName.toLowerCase().includes(searchTerm) ||
-      c.lastMessage.content.toLowerCase().includes(searchTerm) ||
-      (c.subject && c.subject.toLowerCase().includes(searchTerm))
-    );
+    queryParams.append('search', filters.search);
   }
-  
-  // Sort by most recent activity
-  return filtered.sort((a, b) => 
-    new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  );
+
+  const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.INBOX.CONVERSATIONS}?${queryParams.toString()}`;
+  console.log('Fetching conversations from:', url);
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Fetch conversations error:', errorText);
+    throw new Error(`Failed to fetch conversations: ${response.status}`);
+  }
+
+  const result = await response.json();
+  console.log('Conversations response:', result);
+
+  const conversationsData = result.data?.conversations || result.data || result;
+  return (Array.isArray(conversationsData) ? conversationsData : []).map(transformConversation);
 }
 
+/**
+ * Fetch single conversation by ID
+ * GET /inbox/conversations/{id}
+ */
 export async function fetchConversation(id: string): Promise<Conversation | null> {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return mockConversations.find(c => c.id === id) || null;
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.INBOX.CONVERSATION_DETAIL.replace('{id}', id)}`;
+  console.log('Fetching conversation from:', url);
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (response.status === 404) return null;
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch conversation: ${response.status}`);
+  }
+
+  const result = await response.json();
+  const conversationData = result.data || result;
+
+  return transformConversation(conversationData);
 }
 
+/**
+ * Fetch messages for a conversation
+ * GET /inbox/conversations/{id} - messages are included in conversation detail
+ */
 export async function fetchMessages(conversationId: string): Promise<Message[]> {
-  await new Promise(resolve => setTimeout(resolve, 400));
-  return mockMessages[conversationId] || [];
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.INBOX.CONVERSATION_DETAIL.replace('{id}', conversationId)}`;
+  console.log('Fetching messages from:', url);
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch messages: ${response.status}`);
+  }
+
+  const result = await response.json();
+  console.log('Messages response:', result);
+
+  const conversationData = result.data || result;
+  const messagesData = conversationData.messages || [];
+
+  return (Array.isArray(messagesData) ? messagesData : []).map(transformMessage);
 }
 
+/**
+ * Create a new message (starts a conversation)
+ * POST /messages
+ */
+export async function createMessage(
+  recipientId: string,
+  content: string,
+  channel: 'email' | 'sms' = 'email',
+  subject?: string
+): Promise<Message> {
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const payload: any = {
+    recipientId,
+    content,
+    type: channel,
+    subject: subject || 'New Message', // Default subject if not provided
+  };
+
+  const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.MESSAGES.BASE}`;
+  console.log('Creating message at:', url, payload);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Create message error:', errorText);
+    throw new Error(`Failed to create message: ${response.status}`);
+  }
+
+  const result = await response.json();
+  console.log('Message created:', result);
+
+  // The API returns { success: true, data: { message: {...}, conversation: {...} } }
+  // or sometimes just the message array? Postman shows data: [ { ... } ] for GET /messages
+  // But for POST /messages it shows data: { message: {...}, conversation: {...} } (line 8553 is for conversation messages, wait)
+
+  // Let's look at line 7480 again.
+  // Response for POST /messages is not explicitly shown in the grep output I saw, 
+  // but usually it returns the created message.
+  // I'll assume standard format and handle potential variations.
+
+  const data = result.data || result;
+  const messageData = data.message || data; // Handle nested message object if present
+
+  return transformMessage(messageData);
+}
+
+/**
+ * Send a message in a conversation
+ * POST /inbox/conversations/{id}/messages
+ */
 export async function sendMessage(
-  conversationId: string, 
-  content: string, 
+  conversationId: string,
+  content: string,
   channel: 'email' | 'sms',
   scheduledFor?: string
 ): Promise<Message> {
-  await new Promise(resolve => setTimeout(resolve, 600));
-  
-  const newMessage: Message = {
-    id: `m${Date.now()}`,
-    conversationId,
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const payload: any = {
     content,
-    type: 'outbound',
     channel,
-    fromName: 'You',
-    timestamp: scheduledFor || new Date().toISOString(),
-    isRead: true,
-    attachments: [],
-    metadata: {
-      deliveryStatus: 'sent',
-    },
-    createdAt: new Date().toISOString(),
   };
-  
-  // Add to mock data
-  if (!mockMessages[conversationId]) {
-    mockMessages[conversationId] = [];
-  }
-  mockMessages[conversationId].push(newMessage);
-  
-  // Update conversation's last message
-  const conversation = mockConversations.find(c => c.id === conversationId);
-  if (conversation) {
-    conversation.lastMessage = {
-      id: newMessage.id,
-      content: newMessage.content,
-      timestamp: newMessage.timestamp,
-      type: newMessage.type,
-      fromName: newMessage.fromName,
-    };
-    conversation.updatedAt = new Date().toISOString();
-  }
-  
-  return newMessage;
-}
 
-export async function markAsRead(conversationId: string): Promise<void> {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
-  const conversation = mockConversations.find(c => c.id === conversationId);
-  if (conversation) {
-    conversation.unreadCount = 0;
+  if (scheduledFor) {
+    payload.scheduledFor = scheduledFor;
   }
-  
-  // Mark all messages as read
-  const messages = mockMessages[conversationId] || [];
-  messages.forEach(message => {
-    if (message.type === 'inbound') {
-      message.isRead = true;
-    }
+
+  const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.INBOX.CONVERSATION_MESSAGES.replace('{id}', conversationId)}`;
+  console.log('Sending message to:', url, payload);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
   });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Send message error:', errorText);
+    throw new Error(`Failed to send message: ${response.status}`);
+  }
+
+  const result = await response.json();
+  console.log('Message sent:', result);
+
+  const messageData = result.data || result;
+  return transformMessage(messageData);
 }
 
-export async function assignConversation(conversationId: string, userId: string, userName: string): Promise<void> {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  const conversation = mockConversations.find(c => c.id === conversationId);
-  if (conversation) {
-    conversation.assignedTo = {
-      id: userId,
-      name: userName,
-    };
+/**
+ * Mark conversation as read
+ * This updates all unread messages in the conversation
+ */
+export async function markAsRead(conversationId: string): Promise<void> {
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
+  // First, fetch the conversation to get message IDs
+  const messages = await fetchMessages(conversationId);
+
+  // Mark each unread message as read
+  const unreadMessages = messages.filter(m => m.type === 'inbound' && !m.isRead);
+
+  for (const message of unreadMessages) {
+    try {
+      await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.MESSAGES.BASE}/${message.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'read' })
+      });
+    } catch (error) {
+      console.error(`Failed to mark message ${message.id} as read:`, error);
+    }
   }
 }
 
+/**
+ * Assign conversation to a team member
+ * POST /inbox/conversations/{id}/assign
+ */
+export async function assignConversation(
+  conversationId: string,
+  userId: string,
+  userName: string
+): Promise<void> {
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.INBOX.ASSIGN.replace('{id}', conversationId)}`;
+  console.log('Assigning conversation:', url);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ userId })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to assign conversation: ${response.status}`);
+  }
+
+  console.log('Conversation assigned to:', userName);
+}
+
+/**
+ * Add tags to a conversation
+ * PATCH /inbox/conversations/{id}/tags
+ */
 export async function addConversationTags(conversationId: string, tags: string[]): Promise<void> {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
-  const conversation = mockConversations.find(c => c.id === conversationId);
-  if (conversation) {
-    conversation.tags = [...new Set([...conversation.tags, ...tags])];
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.INBOX.TAGS.replace('{id}', conversationId)}`;
+  console.log('Adding tags to conversation:', url, tags);
+
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ tags, action: 'add' })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to add tags: ${response.status}`);
   }
+
+  console.log('Tags added successfully');
 }
 
+/**
+ * Remove tags from a conversation
+ * PATCH /inbox/conversations/{id}/tags
+ */
 export async function removeConversationTags(conversationId: string, tags: string[]): Promise<void> {
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
-  const conversation = mockConversations.find(c => c.id === conversationId);
-  if (conversation) {
-    conversation.tags = conversation.tags.filter(tag => !tags.includes(tag));
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.INBOX.TAGS.replace('{id}', conversationId)}`;
+  console.log('Removing tags from conversation:', url, tags);
+
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ tags, action: 'remove' })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to remove tags: ${response.status}`);
   }
+
+  console.log('Tags removed successfully');
 }
 
-export async function mergeConversations(merge: ConversationMerge): Promise<void> {
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // In a real implementation, this would merge messages and update database
-  const primaryIndex = mockConversations.findIndex(c => c.id === merge.primaryConversationId);
-  const secondaryIndex = mockConversations.findIndex(c => c.id === merge.secondaryConversationId);
-  
-  if (primaryIndex !== -1 && secondaryIndex !== -1) {
-    // Merge messages
-    const primaryMessages = mockMessages[merge.primaryConversationId] || [];
-    const secondaryMessages = mockMessages[merge.secondaryConversationId] || [];
-    mockMessages[merge.primaryConversationId] = [...primaryMessages, ...secondaryMessages]
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-    
-    // Remove secondary conversation
-    mockConversations.splice(secondaryIndex, 1);
-    delete mockMessages[merge.secondaryConversationId];
-  }
-}
-
+/**
+ * Fetch message templates
+ * Uses the existing templates API
+ */
 export async function fetchMessageTemplates(channel?: 'email' | 'sms'): Promise<MessageTemplate[]> {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const queryParams = new URLSearchParams();
   if (channel) {
-    return mockTemplates.filter(t => t.channel === channel);
+    queryParams.append('channel', channel);
   }
-  
-  return mockTemplates;
+
+  const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.TEMPLATES.BASE}?${queryParams.toString()}`;
+  console.log('Fetching message templates from:', url);
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch templates: ${response.status}`);
+  }
+
+  const result = await response.json();
+  const templatesData = result.data || result;
+
+  // Transform to MessageTemplate format
+  return (Array.isArray(templatesData) ? templatesData : []).map((t: any) => ({
+    id: t.id,
+    name: t.name,
+    subject: t.subject,
+    content: t.content || t.body,
+    channel: t.type || channel || 'email',
+    variables: t.variables || [],
+    category: t.category,
+    orgId: t.orgId || t.org_id || t.organizationId,
+  }));
 }

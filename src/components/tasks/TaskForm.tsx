@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -63,29 +63,68 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ open, onOpenChange, onSubmit, task, users, isLoading }: TaskFormProps) {
+  console.log('TaskForm received users:', users);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
-      title: task?.title || "",
-      description: task?.description || "",
-      dueDate: task?.dueDate ? new Date(task.dueDate) : undefined,
-      priority: task?.priority || "medium",
-      assigneeId: task?.assigneeId || "",
-      relatedType: task?.relatedType || undefined,
-      relatedId: task?.relatedId || "",
-      reminderTime: task?.reminderTime || 60,
+      title: "",
+      description: "",
+      dueDate: undefined,
+      priority: "medium",
+      assigneeId: "",
+      // relatedType: task?.relatedType || undefined,
+      // relatedId: task?.relatedId || "",
+      reminderTime: 60,
     },
   });
+
+  // Update form values when task prop changes (for edit mode)
+  useEffect(() => {
+    if (task && open) {
+      form.reset({
+        title: task.title || "",
+        description: task.description || "",
+        dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+        priority: task.priority || "medium",
+        assigneeId: task.assigneeId || "",
+        reminderTime: task.reminderTime || 60,
+      });
+    } else if (!task && open) {
+      // Reset to default values for create mode
+      form.reset({
+        title: "",
+        description: "",
+        dueDate: undefined,
+        priority: "medium",
+        assigneeId: "",
+        reminderTime: 60,
+      });
+    }
+  }, [task, open, form]);
 
   const handleSubmit = async (data: TaskFormData) => {
     setIsSubmitting(true);
     try {
-      await onSubmit({
-        ...data,
+      const payload: any = {
+        title: data.title,
+        description: data.description,
         dueDate: data.dueDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
-      });
+        priority: data.priority,
+        assigneeId: data.assigneeId,
+        reminderTime: data.reminderTime,
+      };
+
+      // Only include relatedType and relatedId if they have values
+      if (data.relatedType) {
+        payload.relatedType = data.relatedType;
+      }
+      if (data.relatedId) {
+        payload.relatedId = data.relatedId;
+      }
+
+      await onSubmit(payload);
       onOpenChange(false);
       form.reset();
     } catch (error) {
@@ -133,7 +172,7 @@ export function TaskForm({ open, onOpenChange, onSubmit, task, users, isLoading 
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Add task description..."
                       rows={3}
                       {...field}
@@ -241,8 +280,8 @@ export function TaskForm({ open, onOpenChange, onSubmit, task, users, isLoading 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Reminder</FormLabel>
-                  <Select 
-                    onValueChange={(value) => field.onChange(parseInt(value))} 
+                  <Select
+                    onValueChange={(value) => field.onChange(parseInt(value))}
                     defaultValue={field.value?.toString()}
                   >
                     <FormControl>
@@ -272,8 +311,8 @@ export function TaskForm({ open, onOpenChange, onSubmit, task, users, isLoading 
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isSubmitting || isLoading}
                 className="btn-primary"
               >

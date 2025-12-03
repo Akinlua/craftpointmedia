@@ -32,13 +32,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { UserPlus, Users, Loader2, Mail } from "lucide-react";
+import { UserPlus, Users, Loader2, Mail, UserX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import TeamTable from "@/components/settings/TeamTable";
 import { teamApi } from "@/lib/api/team";
 import { authApi } from "@/lib/api/auth";
 import { useSession } from "@/lib/hooks/useSession";
 import { TeamMember } from "@/types/org";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const inviteSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -59,6 +60,7 @@ const TeamPage = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [pendingInvites, setPendingInvites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCancelingId, setIsCancelingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadTeamData();
@@ -95,8 +97,6 @@ const TeamPage = () => {
   });
 
   const onSubmit = async (values: InviteFormValues) => {
-    if (!profile || !organization) return;
-    
     setIsSubmitting(true);
     try {
       await authApi.sendInvite({
@@ -120,6 +120,23 @@ const TeamPage = () => {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleCancelInvitation = async (id: string) => {
+    setIsCancelingId(id);
+    try {
+      await teamApi.cancelInvitation(id);
+      toast({ title: "Invitation cancelled" });
+      loadTeamData();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to cancel invitation",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCancelingId(null);
     }
   };
 
@@ -276,7 +293,7 @@ const TeamPage = () => {
                       ) : (
                         <>
                           <Mail className="w-4 h-4 mr-2" />
-                          Send Invitation
+                          Send Invitation 2
                         </>
                       )}
                     </Button>
@@ -355,6 +372,80 @@ const TeamPage = () => {
               <h3 className="text-lg font-semibold mb-2">No team members yet</h3>
               <p className="text-muted-foreground mb-4 max-w-sm">
                 Invite your first team member to get started with collaboration.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pending Invitations */}
+      <Card className="card-subtle">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="w-5 h-5" />
+            Pending Invitations
+          </CardTitle>
+          <CardDescription>
+            Manage outstanding invitations to your organization
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {pendingInvites && pendingInvites.length > 0 ? (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Inviter</TableHead>
+                    <TableHead>Expires</TableHead>
+                    <TableHead className="w-[120px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingInvites.map((invite: any) => (
+                    <TableRow key={invite.id}>
+                      <TableCell className="font-medium">{invite.email}</TableCell>
+                      <TableCell className="capitalize">{invite.role}</TableCell>
+                      <TableCell>
+                        {invite.inviter?.firstName} {invite.inviter?.lastName}
+                      </TableCell>
+                      <TableCell>
+                        {invite.expiresAt ? new Date(invite.expiresAt).toLocaleString() : '—'}
+                      </TableCell>
+                      <TableCell>
+                        {canManageTeam && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCancelInvitation(invite.id)}
+                            disabled={isCancelingId === invite.id}
+                          >
+                            {isCancelingId === invite.id ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Cancelling...
+                              </>
+                            ) : (
+                              <>
+                                <UserX className="w-4 h-4 mr-2" />
+                                Cancel
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Mail className="w-16 h-16 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No pending invitations</h3>
+              <p className="text-muted-foreground mb-4 max-w-sm">
+                Send invitations to add team members to your organization.
               </p>
             </div>
           )}

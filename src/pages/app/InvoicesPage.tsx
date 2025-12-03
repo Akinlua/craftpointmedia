@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { InvoiceTable } from '@/components/sales/InvoiceTable';
-import { getInvoices, bulkUpdateInvoices } from '@/lib/api/invoices';
+import { getInvoices, bulkUpdateInvoices, getInvoiceStats } from '@/lib/api/invoices';
 import { InvoiceFilters } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
 import { can } from '@/lib/rbac/can';
@@ -27,11 +27,17 @@ export default function InvoicesPage() {
     queryFn: () => getInvoices(filters)
   });
 
+  const { data: statsData, isLoading: statsLoading } = useQuery({
+    queryKey: ['invoice-stats'],
+    queryFn: () => getInvoiceStats()
+  });
+
   const bulkUpdateMutation = useMutation({
     mutationFn: ({ action, invoiceIds }: { action: 'send' | 'mark_paid' | 'delete', invoiceIds: string[] }) =>
       bulkUpdateInvoices(action, invoiceIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-stats'] });
       setSelectedInvoices([]);
       toast({
         title: 'Invoices updated',
@@ -58,19 +64,16 @@ export default function InvoicesPage() {
 
   const invoices = invoicesData?.data || [];
   const totalInvoices = invoicesData?.total || 0;
-  
-  // Calculate stats
-  const stats = invoices.reduce((acc, invoice) => {
-    acc.total += invoice.total;
-    if (invoice.status === 'paid') {
-      acc.paid += invoice.total;
-    } else if (invoice.status === 'overdue') {
-      acc.overdue += invoice.total;
-    } else {
-      acc.outstanding += invoice.total;
-    }
-    return acc;
-  }, { total: 0, paid: 0, outstanding: 0, overdue: 0 });
+
+  // Use stats from backend API
+  const stats = statsData?.totals || {
+    totalValue: 0,
+    totalPaid: 0,
+    overdueCount: 0
+  };
+
+  // Calculate outstanding from total - paid
+  const outstanding = stats.totalValue - stats.totalPaid;
 
   // Mock user role for RBAC
   const userRole = 'manager';
@@ -85,13 +88,13 @@ export default function InvoicesPage() {
             Manage invoices and track payments
           </p>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" disabled={selectedInvoices.length === 0}>
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
-          
+
           {can(userRole, 'create', 'invoices') && (
             <Button asChild>
               <Link to="/app/sales/invoices/new">
@@ -112,11 +115,17 @@ export default function InvoicesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.total)}</div>
-            <p className="text-xs text-muted-foreground">{totalInvoices} invoices</p>
+            {statsLoading ? (
+              <div className="text-2xl font-bold">Loading...</div>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{formatCurrency(stats.totalValue)}</div>
+                <p className="text-xs text-muted-foreground">{totalInvoices} invoices</p>
+              </>
+            )}
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -124,10 +133,14 @@ export default function InvoicesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.paid)}</div>
+            {statsLoading ? (
+              <div className="text-2xl font-bold">Loading...</div>
+            ) : (
+              <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalPaid)}</div>
+            )}
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -135,10 +148,14 @@ export default function InvoicesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{formatCurrency(stats.outstanding)}</div>
+            {statsLoading ? (
+              <div className="text-2xl font-bold">Loading...</div>
+            ) : (
+              <div className="text-2xl font-bold text-blue-600">{formatCurrency(outstanding)}</div>
+            )}
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -146,7 +163,11 @@ export default function InvoicesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(stats.overdue)}</div>
+            {statsLoading ? (
+              <div className="text-2xl font-bold">Loading...</div>
+            ) : (
+              <div className="text-2xl font-bold text-red-600">{stats.overdueCount} invoices</div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -162,7 +183,7 @@ export default function InvoicesPage() {
                   {selectedInvoices.length} invoice{selectedInvoices.length > 1 ? 's' : ''} selected
                 </span>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
@@ -215,7 +236,7 @@ export default function InvoicesPage() {
                 className="pl-10"
               />
             </div>
-            
+
             <div className="flex gap-2 flex-wrap">
               {['draft', 'sent', 'paid', 'overdue'].map((status) => (
                 <Button

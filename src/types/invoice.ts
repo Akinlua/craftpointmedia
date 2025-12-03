@@ -26,7 +26,7 @@ export interface Invoice {
   notes?: string;
   terms?: string;
   dueDate?: string;
-  paymentTerms?: number; // days
+  paymentTerms?: string; // Changed from number to string for backend compatibility
   sentAt?: string;
   paidAt?: string;
   createdAt: string;
@@ -60,7 +60,7 @@ export interface CreateInvoiceData {
   notes?: string;
   terms?: string;
   dueDate?: string;
-  paymentTerms?: number;
+  paymentTerms?: string; // Changed from number to string for backend compatibility
 }
 
 export interface UpdateInvoiceData extends Partial<CreateInvoiceData> {
@@ -71,11 +71,13 @@ export interface UpdateInvoiceData extends Partial<CreateInvoiceData> {
 export interface SendInvoiceData {
   invoiceId: string;
   channels: ('email' | 'sms')[];
-  template: {
-    subject: string;
-    body: string;
-    attachPdf: boolean;
+  template?: {
+    email?: {
+      subject?: string;
+      customMessage?: string;
+    };
   };
+  customMessage?: string;
 }
 
 export interface InvoiceActivity {

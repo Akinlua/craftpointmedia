@@ -81,7 +81,7 @@ const reportsItems = [
   },
   {
     title: "Customer Report",
-    url: "/app/reports/customers", 
+    url: "/app/reports/customers",
     icon: Users,
   },
 ];
@@ -134,8 +134,8 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg overflow-hidden">
-            <img 
-              src="/lovable-uploads/a2be0e90-2f01-4a6d-8c56-d1cc72041092.png" 
+            <img
+              src="/lovable-uploads/a2be0e90-2f01-4a6d-8c56-d1cc72041092.png"
               alt="Craftpoint"
               className="w-full h-full object-contain"
             />
@@ -188,6 +188,47 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Marketing</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className={getNavClasses(currentPath === "/app/marketing")}
+                >
+                  <NavLink to="/app/marketing">
+                    <BarChart3 className="w-4 h-4" />
+                    {!isCollapsed && <span>Overview</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className={getNavClasses(currentPath === "/app/marketing/campaigns")}
+                >
+                  <NavLink to="/app/marketing/campaigns">
+                    <MessageCircle className="w-4 h-4" />
+                    {!isCollapsed && <span>Campaigns</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className={getNavClasses(currentPath === "/app/marketing/templates")}
+                >
+                  <NavLink to="/app/marketing/templates">
+                    <CheckSquare className="w-4 h-4" />
+                    {!isCollapsed && <span>Templates</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -254,7 +295,7 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        
+
         {!isCollapsed && (
           <SidebarGroup className="mt-auto">
             <SidebarGroupContent>

@@ -1,6 +1,6 @@
 import { User, Organization } from '@/types/user';
 import { ENV, API_ENDPOINTS } from '@/lib/config/env';
-import { supabase } from '@/integrations/supabase/client';
+
 
 // Mock data
 const mockOrganizations: Organization[] = [
@@ -89,72 +89,58 @@ const callApiWithFallback = async <T,>(
 // Mock API functions with real backend integration
 export const authApi = {
   async login(credentials: LoginCredentials): Promise<{ user: User; org: Organization; token?: string }> {
-    return callApiWithFallback(
-      async () => {
-        const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(credentials),
-        });
-        
-        if (!response.ok) {
-          throw new Error('Invalid email or password');
-        }
-        
-        return await response.json();
-      },
-      // Fallback to mock data
-      (() => {
-        const user = mockUsers.find(u => u.email === credentials.email);
-        if (!user) throw new Error('Invalid email or password');
-        const org = mockOrganizations.find(o => o.id === user.orgId);
-        if (!org) throw new Error('Organization not found');
-        return { user, org };
-      })()
-    );
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    });
+    
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || 'Invalid email or password');
+    }
+    
+    const raw = await response.json();
+    const message = raw?.message ?? raw;
+    const user = message?.user ?? raw?.data?.user ?? raw?.user;
+    const org = message?.org ?? raw?.data?.org ?? raw?.organization ?? raw?.org;
+    const token = message?.token ?? raw?.data?.token ?? raw?.token;
+    
+    if (!user) {
+      throw new Error('Login succeeded but missing user');
+    }
+    
+    return { user, org, token };
   },
 
   async signup(data: SignupData): Promise<{ user: User; org: Organization }> {
-    await delay(1500);
-    
-    // Check if user exists
-    if (mockUsers.find(u => u.email === data.email)) {
-      throw new Error('User already exists');
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.AUTH.SIGNUP}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        company: data.company,
+        password: data.password,
+      }),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || 'Signup failed');
     }
-    
-    // Create new org
-    const newOrg: Organization = {
-      id: `org-${Date.now()}`,
-      name: data.company,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    // Create new user
-    const newUser: User = {
-      id: `user-${Date.now()}`,
-      email: data.email,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      role: 'owner',
-      orgId: newOrg.id,
-      emailVerified: false,
-      twoFactorEnabled: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    mockUsers.push(newUser);
-    mockOrganizations.push(newOrg);
-    
-    return { user: newUser, org: newOrg };
+    const result = await response.json();
+    return { user: result.user, org: result.organization };
   },
 
   async resetPassword(data: ResetPasswordData): Promise<{ message: string }> {
-    await delay(800);
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.AUTH.FORGOT_PASSWORD}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: data.email }),
+    });
     
-    const user = mockUsers.find(u => u.email === data.email);
-    if (!user) {
+    if (!response.ok) {
       throw new Error('User not found');
     }
     
@@ -173,61 +159,39 @@ export const authApi = {
   },
 
   async acceptInvite(data: InviteAcceptData): Promise<{ user: User; org: Organization; token?: string }> {
-    return callApiWithFallback(
-      async () => {
-        const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.AUTH.ACCEPT_INVITATION}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to accept invitation');
-        }
-        
-        return await response.json();
-      },
-      // Fallback to mock data
-      (() => {
-        const org = mockOrganizations[0];
-        const newUser: User = {
-          id: `user-${Date.now()}`,
-          email: 'invited@example.com',
-          firstName: data.firstName,
-          lastName: data.lastName,
-          role: 'staff',
-          orgId: org.id,
-          emailVerified: true,
-          twoFactorEnabled: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        mockUsers.push(newUser);
-        return { user: newUser, org };
-      })()
-    );
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.AUTH.ACCEPT_INVITATION}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to accept invitation');
+    }
+    
+    return await response.json();
   },
 
   async sendInvite(data: InviteData): Promise<{ success: boolean; message: string }> {
-    const { data: result, error } = await supabase.functions.invoke('send-invitation', {
-      body: {
-        email: data.email,
-        role: data.role,
-        message: data.message,
+    const token = localStorage.getItem('AUTH_TOKEN');
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.AUTH.INVITE}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
+      body: JSON.stringify(data),
     });
-
-    if (error) {
-      throw new Error(error.message || 'Failed to send invitation');
+    if (!response.ok) {
+      throw new Error('Failed to send invitation');
     }
-
-    if (result?.error) {
-      throw new Error(result.error);
-    }
-
+    const result = await response.json();
     return {
       success: true,
-      message: result?.message || 'Invitation sent successfully'
+      message: result?.message || 'Invitation sent successfully',
     };
   },
 
@@ -237,28 +201,18 @@ export const authApi = {
   },
 
   async loginWithOAuth(provider: 'google' | 'microsoft'): Promise<{ user: User; org: Organization; token?: string }> {
-    return callApiWithFallback(
-      async () => {
-        // For real OAuth, this would redirect to the OAuth provider
-        // and handle the callback with backend integration
-        const response = await fetch(`${ENV.API_BASE_URL}/auth/oauth/${provider}`, {
-          method: 'GET',
-          credentials: 'include',
-        });
-        
-        if (!response.ok) {
-          throw new Error('OAuth login failed');
-        }
-        
-        return await response.json();
-      },
-      // Fallback to mock data
-      (() => {
-        const user = mockUsers[0];
-        const org = mockOrganizations.find(o => o.id === user.orgId)!;
-        return { user, org };
-      })()
-    );
+    // For real OAuth, this would redirect to the OAuth provider
+    // and handle the callback with backend integration
+    const response = await fetch(`${ENV.API_BASE_URL}/auth/oauth/${provider}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      throw new Error('OAuth login failed');
+    }
+    
+    return await response.json();
   },
 
   async getUserOrganizations(userId: string): Promise<Organization[]> {

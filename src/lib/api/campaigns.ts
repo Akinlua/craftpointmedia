@@ -1,7 +1,7 @@
-import { supabase } from '@/integrations/supabase/client';
-import type { 
-  EmailCampaign, 
-  SmsCampaign, 
+import { ENV, API_ENDPOINTS } from '@/lib/config/env';
+import type {
+  EmailCampaign,
+  SmsCampaign,
   CampaignRecipient,
   CreateEmailCampaignData,
   CreateSmsCampaignData,
@@ -13,266 +13,270 @@ import type {
 // Transform database row to EmailCampaign type
 const transformEmailCampaign = (row: any): EmailCampaign => ({
   id: row.id,
-  orgId: row.org_id,
+  orgId: row.orgId || row.org_id,
   name: row.name,
   subject: row.subject,
   content: row.content,
-  fromName: row.from_name,
-  fromEmail: row.from_email,
+  fromName: row.fromName || row.from_name,
+  fromEmail: row.fromEmail || row.from_email,
   status: row.status,
-  scheduledAt: row.scheduled_at,
-  sentAt: row.sent_at,
-  targetType: row.target_type,
-  targetFilter: row.target_filter,
-  templateId: row.template_id,
+  scheduledAt: row.scheduledAt || row.scheduled_at,
+  sentAt: row.sentAt || row.sent_at,
+  targetType: row.targetType || row.target_type,
+  targetFilter: row.targetFilter || row.target_filter,
+  templateId: row.templateId || row.template_id,
   settings: row.settings,
-  statistics: row.statistics,
-  createdBy: row.created_by,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
+  statistics: row.statistics || {
+    sent: row.sent || 0,
+    delivered: 0,
+    opened: row.opened || 0,
+    clicked: row.clicked || 0,
+    bounced: row.bounced || 0,
+    failed: 0,
+    unsubscribed: row.unsubscribed || 0
+  },
+  createdBy: row.createdBy || row.created_by,
+  createdAt: row.createdAt || row.created_at,
+  updatedAt: row.updatedAt || row.updated_at,
 });
 
 // Transform database row to SmsCampaign type
 const transformSmsCampaign = (row: any): SmsCampaign => ({
   id: row.id,
-  orgId: row.org_id,
+  orgId: row.orgId || row.org_id,
   name: row.name,
   message: row.message,
-  senderId: row.sender_id,
+  senderId: row.senderId || row.sender_id,
   status: row.status,
-  scheduledAt: row.scheduled_at,
-  sentAt: row.sent_at,
-  targetType: row.target_type,
-  targetFilter: row.target_filter,
+  scheduledAt: row.scheduledAt || row.scheduled_at,
+  sentAt: row.sentAt || row.sent_at,
+  targetType: row.targetType || row.target_type,
+  targetFilter: row.targetFilter || row.target_filter,
   settings: row.settings,
-  statistics: row.statistics,
-  createdBy: row.created_by,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
+  statistics: row.statistics || {
+    sent: row.sent || 0,
+    delivered: 0,
+    bounced: row.bounced || 0,
+    failed: 0,
+  },
+  createdBy: row.createdBy || row.created_by,
+  createdAt: row.createdAt || row.created_at,
+  updatedAt: row.updatedAt || row.updated_at,
 });
+
+// Helper to get auth token
+const getAuthToken = () => localStorage.getItem('AUTH_TOKEN');
 
 export const campaignsApi = {
   // Get all email campaigns
   async getEmailCampaigns(status?: CampaignStatus): Promise<EmailCampaign[]> {
-    let query = supabase
-      .from('email_campaigns')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    if (status) {
-      query = query.eq('status', status);
-    }
+    const queryParams = new URLSearchParams({ type: 'email' });
+    if (status) queryParams.append('status', status);
 
-    const { data, error } = await query;
-    if (error) throw error;
-    return data.map(transformEmailCampaign);
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.CAMPAIGNS.BASE}?${queryParams.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch email campaigns');
+
+    const result = await response.json();
+    return (result.data?.campaigns || []).map(transformEmailCampaign);
   },
 
   // Get all SMS campaigns
   async getSmsCampaigns(status?: CampaignStatus): Promise<SmsCampaign[]> {
-    let query = supabase
-      .from('sms_campaigns')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    if (status) {
-      query = query.eq('status', status);
-    }
+    const queryParams = new URLSearchParams({ type: 'sms' });
+    if (status) queryParams.append('status', status);
 
-    const { data, error } = await query;
-    if (error) throw error;
-    return data.map(transformSmsCampaign);
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.CAMPAIGNS.BASE}?${queryParams.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch SMS campaigns');
+
+    const result = await response.json();
+    return (result.data?.campaigns || []).map(transformSmsCampaign);
   },
 
   // Get campaign by ID
   async getEmailCampaignById(id: string): Promise<EmailCampaign> {
-    const { data, error } = await supabase
-      .from('email_campaigns')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    if (error) throw error;
-    return transformEmailCampaign(data);
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.CAMPAIGNS.BASE}/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch campaign');
+
+    const data = await response.json();
+    return transformEmailCampaign(data.data || data);
   },
 
   async getSmsCampaignById(id: string): Promise<SmsCampaign> {
-    const { data, error } = await supabase
-      .from('sms_campaigns')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    if (error) throw error;
-    return transformSmsCampaign(data);
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.CAMPAIGNS.BASE}/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch campaign');
+
+    const data = await response.json();
+    return transformSmsCampaign(data.data || data);
   },
 
   // Create email campaign
   async createEmailCampaign(campaignData: CreateEmailCampaignData): Promise<EmailCampaign> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User not authenticated');
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('org_id')
-      .eq('id', user.id)
-      .single();
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.CAMPAIGNS.BASE}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ ...campaignData, type: 'email' })
+    });
 
-    if (!profile) throw new Error('Profile not found');
+    if (!response.ok) throw new Error('Failed to create campaign');
 
-    const { data, error } = await supabase
-      .from('email_campaigns')
-      .insert({
-        org_id: profile.org_id,
-        name: campaignData.name,
-        subject: campaignData.subject,
-        content: campaignData.content,
-        from_name: campaignData.fromName,
-        from_email: campaignData.fromEmail,
-        target_type: campaignData.targetType,
-        target_filter: campaignData.targetFilter || {},
-        template_id: campaignData.templateId,
-        settings: campaignData.settings || {},
-        scheduled_at: campaignData.scheduledAt,
-        created_by: user.id,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return transformEmailCampaign(data);
+    const data = await response.json();
+    return transformEmailCampaign(data.data || data);
   },
 
   // Create SMS campaign
   async createSmsCampaign(campaignData: CreateSmsCampaignData): Promise<SmsCampaign> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User not authenticated');
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('org_id')
-      .eq('id', user.id)
-      .single();
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.CAMPAIGNS.BASE}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ ...campaignData, type: 'sms' })
+    });
 
-    if (!profile) throw new Error('Profile not found');
+    if (!response.ok) throw new Error('Failed to create campaign');
 
-    const { data, error } = await supabase
-      .from('sms_campaigns')
-      .insert({
-        org_id: profile.org_id,
-        name: campaignData.name,
-        message: campaignData.message,
-        sender_id: campaignData.senderId,
-        target_type: campaignData.targetType,
-        target_filter: campaignData.targetFilter || {},
-        scheduled_at: campaignData.scheduledAt,
-        created_by: user.id,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return transformSmsCampaign(data);
+    const data = await response.json();
+    return transformSmsCampaign(data.data || data);
   },
 
   // Update campaign
   async updateEmailCampaign(id: string, updates: Partial<CreateEmailCampaignData>): Promise<EmailCampaign> {
-    const updateData: any = {};
-    
-    if (updates.name !== undefined) updateData.name = updates.name;
-    if (updates.subject !== undefined) updateData.subject = updates.subject;
-    if (updates.content !== undefined) updateData.content = updates.content;
-    if (updates.fromName !== undefined) updateData.from_name = updates.fromName;
-    if (updates.fromEmail !== undefined) updateData.from_email = updates.fromEmail;
-    if (updates.targetType !== undefined) updateData.target_type = updates.targetType;
-    if (updates.targetFilter !== undefined) updateData.target_filter = updates.targetFilter;
-    if (updates.settings !== undefined) updateData.settings = updates.settings;
-    if (updates.scheduledAt !== undefined) updateData.scheduled_at = updates.scheduledAt;
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    const { data, error } = await supabase
-      .from('email_campaigns')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.CAMPAIGNS.BASE}/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(updates)
+    });
 
-    if (error) throw error;
-    return transformEmailCampaign(data);
+    if (!response.ok) throw new Error('Failed to update campaign');
+
+    const data = await response.json();
+    return transformEmailCampaign(data.data || data);
   },
 
   // Delete campaign
   async deleteCampaign(id: string, type: CampaignType): Promise<void> {
-    const table = type === 'email' ? 'email_campaigns' : 'sms_campaigns';
-    const { error } = await supabase
-      .from(table)
-      .delete()
-      .eq('id', id);
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    if (error) throw error;
-  },
-
-  // Send campaign (triggers edge function)
-  async sendCampaign(id: string, type: CampaignType): Promise<void> {
-    const functionName = type === 'email' ? 'send-email-campaign' : 'send-sms-campaign';
-    
-    const { error } = await supabase.functions.invoke(functionName, {
-      body: { campaignId: id }
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.CAMPAIGNS.BASE}/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
     });
 
-    if (error) throw error;
+    if (!response.ok) throw new Error('Failed to delete campaign');
+  },
+
+  // Send campaign
+  async sendCampaign(id: string, type: CampaignType): Promise<void> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.CAMPAIGNS.SEND.replace('{id}', id)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error('Failed to send campaign');
   },
 
   // Schedule campaign
   async scheduleCampaign(id: string, type: CampaignType, scheduledAt: string): Promise<void> {
-    const table = type === 'email' ? 'email_campaigns' : 'sms_campaigns';
-    
-    const { error } = await supabase
-      .from(table)
-      .update({ 
-        scheduled_at: scheduledAt,
-        status: 'scheduled'
-      })
-      .eq('id', id);
+    // Backend docs don't show a specific schedule endpoint, but update works.
+    // Or we can use PATCH /campaigns/:id with scheduledAt
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    if (error) throw error;
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.CAMPAIGNS.BASE}/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ scheduledAt, status: 'scheduled' })
+    });
+
+    if (!response.ok) throw new Error('Failed to schedule campaign');
   },
 
   // Pause campaign
   async pauseCampaign(id: string, type: CampaignType): Promise<void> {
-    const table = type === 'email' ? 'email_campaigns' : 'sms_campaigns';
-    
-    const { error } = await supabase
-      .from(table)
-      .update({ status: 'paused' })
-      .eq('id', id);
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    if (error) throw error;
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.CAMPAIGNS.PAUSE.replace('{id}', id)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error('Failed to pause campaign');
   },
 
   // Get campaign recipients
   async getCampaignRecipients(campaignId: string): Promise<CampaignRecipient[]> {
-    const { data, error } = await supabase
-      .from('campaign_recipients')
-      .select('*')
-      .eq('campaign_id', campaignId)
-      .order('created_at', { ascending: false });
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
 
-    if (error) throw error;
-    
-    return data.map(row => ({
+    const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.CAMPAIGNS.RECIPIENTS.replace('{id}', campaignId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch recipients');
+
+    const result = await response.json();
+    return (result.data || []).map((row: any) => ({
       id: row.id,
-      campaignId: row.campaign_id,
-      campaignType: row.campaign_type as CampaignType,
-      contactId: row.contact_id,
+      campaignId: row.campaignId || row.campaign_id,
+      campaignType: row.campaignType || row.campaign_type as CampaignType,
+      contactId: row.contactId || row.contact_id,
       status: row.status as RecipientStatus,
-      sentAt: row.sent_at,
-      deliveredAt: row.delivered_at,
-      openedAt: row.opened_at,
-      clickedAt: row.clicked_at,
-      bounceReason: row.bounce_reason,
-      errorMessage: row.error_message,
-      metadata: (row.metadata as Record<string, any>) || {},
-      createdAt: row.created_at,
+      sentAt: row.sentAt || row.sent_at,
+      deliveredAt: row.deliveredAt || row.delivered_at,
+      openedAt: row.openedAt || row.opened_at,
+      clickedAt: row.clickedAt || row.clicked_at,
+      bounceReason: row.bounceReason || row.bounce_reason,
+      errorMessage: row.errorMessage || row.error_message,
+      metadata: row.metadata || {},
+      createdAt: row.createdAt || row.created_at,
     }));
   },
 

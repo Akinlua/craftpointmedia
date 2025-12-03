@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ConversationChannel } from "@/types/conversation";
-import { useCRMStore } from "@/lib/stores/crmStore";
 import { useToast } from "@/hooks/use-toast";
-import { Search, X, Send, Mail, MessageSquare } from "lucide-react";
+import { Search, X, Send, MessageSquare } from "lucide-react";
+
+import { contactsApi } from "@/lib/api/contacts";
+import { createMessage } from "@/lib/api/inbox";
+import { Contact } from "@/types/contact";
 
 interface ComposeMessageModalProps {
   open: boolean;
@@ -18,22 +19,47 @@ interface ComposeMessageModalProps {
   preselectedContactId?: string;
 }
 
-export const ComposeMessageModal = ({ 
-  open, 
-  onOpenChange, 
-  preselectedContactId 
+export const ComposeMessageModal = ({
+  open,
+  onOpenChange,
+  preselectedContactId
 }: ComposeMessageModalProps) => {
-  const { contacts, currentUser } = useCRMStore();
   const { toast } = useToast();
-  
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedContacts, setSelectedContacts] = useState<string[]>(
     preselectedContactId ? [preselectedContactId] : []
   );
-  const [channel, setChannel] = useState<ConversationChannel>('email');
-  const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [showContactSearch, setShowContactSearch] = useState(!preselectedContactId);
+  const [isSending, setIsSending] = useState(false);
+
+  // Load contacts on mount or open
+  useEffect(() => {
+    if (open) {
+      loadContacts();
+    }
+  }, [open]);
+
+  const loadContacts = async () => {
+    setIsLoadingContacts(true);
+    try {
+      // Fetch all contacts (or first 100)
+      const result = await contactsApi.getContacts({}, 1, 100);
+      setContacts(result.data);
+    } catch (error) {
+      console.error('Failed to load contacts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load contacts",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingContacts(false);
+    }
+  };
 
   // Filter contacts based on search
   const filteredContacts = contacts.filter(contact => {
@@ -41,7 +67,7 @@ export const ComposeMessageModal = ({
     const company = contact.company?.toLowerCase() || '';
     const email = contact.email.toLowerCase();
     const query = searchQuery.toLowerCase();
-    
+
     return fullName.includes(query) || company.includes(query) || email.includes(query);
   });
 
@@ -50,8 +76,8 @@ export const ComposeMessageModal = ({
   };
 
   const handleContactToggle = (contactId: string) => {
-    setSelectedContacts(prev => 
-      prev.includes(contactId) 
+    setSelectedContacts(prev =>
+      prev.includes(contactId)
         ? prev.filter(id => id !== contactId)
         : [...prev, contactId]
     );
@@ -61,7 +87,7 @@ export const ComposeMessageModal = ({
     setSelectedContacts(prev => prev.filter(id => id !== contactId));
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (selectedContacts.length === 0) {
       toast({
         title: "No Recipients",
@@ -80,74 +106,38 @@ export const ComposeMessageModal = ({
       return;
     }
 
-    if (channel === 'email' && !subject.trim()) {
-      toast({
-        title: "Missing Subject",
-        description: "Please enter a subject for the email",
-        variant: "destructive"
-      });
-      return;
-    }
-
+    setIsSending(true);
     try {
-      // Create conversations/messages for each selected contact
-      selectedContacts.forEach(contactId => {
-        const contact = contacts.find(c => c.id === contactId);
-        if (contact && currentUser) {
-          // Here we would normally send the message via API
-          // For now, we'll create a mock conversation
-          const mockConversation = {
-            contactId: contact.id,
-            contactName: `${contact.firstName} ${contact.lastName}`,
-            contactAvatar: contact.avatar,
-            contactCompany: contact.company,
-            channel: channel,
-            status: 'open' as const,
-            subject: channel === 'email' ? subject : undefined,
-            lastMessage: {
-              id: `msg_${Date.now()}`,
-              content: message,
-              timestamp: new Date().toISOString(),
-              type: 'outbound' as const,
-              fromName: `${currentUser.firstName} ${currentUser.lastName}`
-            },
-            unreadCount: 0,
-            assignedTo: {
-              id: currentUser.id,
-              name: `${currentUser.firstName} ${currentUser.lastName}`,
-              avatar: currentUser.avatar
-            },
-            tags: [],
-            priority: 'normal' as const,
-            isOverdue: false,
-            orgId: currentUser.orgId
-          };
-          
-          // This would be implemented in the store
-          // addConversation(mockConversation);
-        }
-      });
+      // Send message to each selected contact
+      // In a real scenario, we might want a bulk send endpoint, but for now we loop
+      const promises = selectedContacts.map(contactId =>
+        createMessage(contactId, message, 'email') // Defaulting to 'email' as per API requirement, though UI is internal
+      );
+
+      await Promise.all(promises);
 
       const contactNames = getSelectedContactsData().map(c => `${c.firstName} ${c.lastName}`).join(', ');
-      
+
       toast({
         title: "Message Sent",
-        description: `Message sent to ${contactNames} via ${channel}`,
+        description: `Message sent to ${contactNames}`,
       });
 
       // Reset form
       setSelectedContacts(preselectedContactId ? [preselectedContactId] : []);
-      setSubject('');
       setMessage('');
       setSearchQuery('');
-      
+
       onOpenChange(false);
     } catch (error) {
+      console.error('Send error:', error);
       toast({
         title: "Error",
         description: "Failed to send message",
         variant: "destructive"
       });
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -160,40 +150,17 @@ export const ComposeMessageModal = ({
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {channel === 'email' ? <Mail className="w-5 h-5" /> : <MessageSquare className="w-5 h-5" />}
+            <MessageSquare className="w-5 h-5" />
             Compose Message
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 flex flex-col gap-4 overflow-hidden">
-          {/* Channel Selection */}
-          <div className="space-y-2">
-            <Label>Channel</Label>
-            <Select value={channel} onValueChange={(value) => setChannel(value as ConversationChannel)}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="email">
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4" />
-                    Email
-                  </div>
-                </SelectItem>
-                <SelectItem value="sms">
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4" />
-                    SMS
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
           {/* Contact Selection */}
           <div className="space-y-2">
             <Label>Recipients</Label>
-            
+
             {/* Selected contacts */}
             {selectedContacts.length > 0 && (
               <div className="flex flex-wrap gap-2 p-2 bg-muted rounded-md">
@@ -230,7 +197,7 @@ export const ComposeMessageModal = ({
                   className="pl-10"
                 />
               </div>
-              
+
               {showContactSearch && (
                 <div className="max-h-48 overflow-y-auto border rounded-md">
                   {filteredContacts.length === 0 ? (
@@ -241,9 +208,8 @@ export const ComposeMessageModal = ({
                     filteredContacts.map(contact => (
                       <div
                         key={contact.id}
-                        className={`flex items-center gap-3 p-2 hover:bg-accent cursor-pointer ${
-                          selectedContacts.includes(contact.id) ? 'bg-accent' : ''
-                        }`}
+                        className={`flex items-center gap-3 p-2 hover:bg-accent cursor-pointer ${selectedContacts.includes(contact.id) ? 'bg-accent' : ''
+                          }`}
                         onClick={() => handleContactToggle(contact.id)}
                       >
                         <input
@@ -260,30 +226,16 @@ export const ComposeMessageModal = ({
                         <div className="flex-1 min-w-0">
                           <p className="font-medium">{contact.firstName} {contact.lastName}</p>
                           <p className="text-sm text-muted-foreground truncate">
-                            {contact.email} 
+                            {contact.email}
                             {contact.company && ` • ${contact.company}`}
                           </p>
                         </div>
                       </div>
-                    ))
-                  )}
+                    )))}
                 </div>
               )}
             </div>
           </div>
-
-          {/* Subject (Email only) */}
-          {channel === 'email' && (
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject</Label>
-              <Input
-                id="subject"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Enter email subject"
-              />
-            </div>
-          )}
 
           {/* Message */}
           <div className="space-y-2 flex-1 flex flex-col">
@@ -292,7 +244,7 @@ export const ComposeMessageModal = ({
               id="message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder={`Enter your ${channel} message...`}
+              placeholder="Enter your message..."
               className="flex-1 min-h-32 resize-none"
             />
           </div>
@@ -303,7 +255,7 @@ export const ComposeMessageModal = ({
           <div className="text-sm text-muted-foreground">
             {selectedContacts.length} recipient{selectedContacts.length !== 1 ? 's' : ''} selected
           </div>
-          
+
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { ENV } from "@/lib/config/env";
 import { Building2, Loader2, ArrowRight } from "lucide-react";
 
 const createOrgSchema = z.object({
@@ -40,39 +40,27 @@ const CreateOrganizationPage = () => {
 
   const onSubmit = async (data: CreateOrgFormData) => {
     setIsSubmitting(true);
-
     try {
-      // Call the edge function to create organization
-      const { data: result, error } = await supabase.functions.invoke('create-organization', {
-        body: {
-          organizationName: data.organizationName,
+      const response = await fetch(`${ENV.API_BASE_URL}/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           firstName: data.firstName,
           lastName: data.lastName,
           email: data.email,
+          company: data.organizationName,
           password: data.password,
-        },
+        }),
       });
-
-      if (error) {
-        throw new Error(error.message);
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || 'Failed to create organization');
       }
-
-      // Now sign in the user
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
-      });
-
-      if (signInError) {
-        throw new Error('Account created but sign-in failed. Please try logging in.');
-      }
-
       toast({
         title: "Organization created!",
-        description: "Your account has been created successfully. Welcome!",
+        description: "Your account has been created successfully. Please sign in.",
       });
-
-      navigate('/app/dashboard');
+      navigate('/auth/login');
     } catch (error: any) {
       console.error('Signup error:', error);
       toast({
