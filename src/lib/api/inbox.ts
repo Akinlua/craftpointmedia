@@ -5,55 +5,76 @@ import { ENV, API_ENDPOINTS } from '@/lib/config/env';
 const getAuthToken = () => localStorage.getItem('AUTH_TOKEN');
 
 // Helper to transform backend conversation to frontend format
-const transformConversation = (data: any): Conversation => ({
-  id: data.id,
-  contactId: data.contactId || data.contact_id,
-  contactName: data.contactName || data.contact_name || 'Unknown',
-  contactCompany: data.contactCompany || data.contact_company,
-  channel: data.channel,
-  status: data.status,
-  subject: data.subject,
-  lastMessage: data.lastMessage || data.last_message ? {
-    id: data.lastMessage?.id || data.last_message?.id,
-    content: data.lastMessage?.content || data.last_message?.content,
-    timestamp: data.lastMessage?.timestamp || data.last_message?.timestamp,
-    type: data.lastMessage?.type || data.last_message?.type,
-    fromName: data.lastMessage?.fromName || data.last_message?.from_name,
-  } : undefined,
-  unreadCount: data.unreadCount || data.unread_count || 0,
-  assignedTo: data.assignedTo || data.assigned_to ? {
-    id: data.assignedTo?.id || data.assigned_to?.id,
-    name: data.assignedTo?.name || data.assigned_to?.name,
-    avatar: data.assignedTo?.avatar || data.assigned_to?.avatar,
-  } : undefined,
-  tags: data.tags || [],
-  priority: data.priority,
-  slaDeadline: data.slaDeadline || data.sla_deadline,
-  isOverdue: data.isOverdue || data.is_overdue || false,
-  createdAt: data.createdAt || data.created_at,
-  updatedAt: data.updatedAt || data.updated_at,
-  orgId: data.orgId || data.org_id || data.organizationId || data.organization_id,
-});
+const transformConversation = (data: any): Conversation => {
+  const contact = data.contact || {};
+  const contactName = contact.firstName && contact.lastName
+    ? `${contact.firstName} ${contact.lastName}`
+    : (data.contactName || data.contact_name || 'Unknown');
+
+  return {
+    id: data.id,
+    contactId: data.contactId || data.contact_id,
+    contactName: contactName,
+    contactAvatar: contact.avatar || data.contactAvatar,
+    contactCompany: contact.company || data.contactCompany || data.contact_company,
+    channel: data.channel,
+    status: data.status,
+    subject: data.subject,
+    lastMessage: data.lastMessage || data.last_message ? {
+      id: data.lastMessage?.id || data.last_message?.id,
+      content: data.lastMessage?.content || data.last_message?.content,
+      timestamp: data.lastMessage?.timestamp || data.last_message?.timestamp,
+      type: data.lastMessage?.type || data.last_message?.type,
+      fromName: data.lastMessage?.fromName || data.last_message?.from_name,
+    } : undefined,
+    unreadCount: data.unreadCount || data.unread_count || 0,
+    assignedTo: data.assignedTo || data.assigned_to ? {
+      id: data.assignedTo?.id || data.assigned_to?.id,
+      name: data.assignedTo?.name || data.assigned_to?.name,
+      avatar: data.assignedTo?.avatar || data.assigned_to?.avatar,
+    } : undefined,
+    tags: data.tags || [],
+    priority: data.priority,
+    slaDeadline: data.slaDeadline || data.sla_deadline,
+    isOverdue: data.isOverdue || data.is_overdue || false,
+    createdAt: data.createdAt || data.created_at,
+    updatedAt: data.updatedAt || data.updated_at,
+    orgId: data.orgId || data.org_id || data.organizationId || data.organization_id,
+  };
+};
 
 // Helper to transform backend message to frontend format
-const transformMessage = (data: any): Message => ({
-  id: data.id,
-  conversationId: data.conversationId || data.conversation_id,
-  content: data.content,
-  type: data.type,
-  channel: data.channel,
-  fromEmail: data.fromEmail || data.from_email,
-  fromName: data.fromName || data.from_name,
-  fromPhone: data.fromPhone || data.from_phone,
-  toEmail: data.toEmail || data.to_email,
-  toName: data.toName || data.to_name,
-  toPhone: data.toPhone || data.to_phone,
-  timestamp: data.timestamp || data.created_at,
-  isRead: data.isRead || data.is_read || false,
-  attachments: data.attachments || [],
-  metadata: data.metadata || {},
-  createdAt: data.createdAt || data.created_at,
-});
+const transformMessage = (data: any): Message => {
+  const sender = data.sender || {};
+  const recipient = data.recipient || {};
+
+  const fromName = sender.firstName && sender.lastName
+    ? `${sender.firstName} ${sender.lastName}`
+    : (data.fromName || data.from_name || 'Unknown');
+
+  const toName = recipient.firstName && recipient.lastName
+    ? `${recipient.firstName} ${recipient.lastName}`
+    : (data.toName || data.to_name || 'Unknown');
+
+  return {
+    id: data.id,
+    conversationId: data.conversationId || data.conversation_id,
+    content: data.content,
+    type: data.type,
+    channel: data.channel,
+    fromEmail: sender.email || data.fromEmail || data.from_email,
+    fromName: fromName,
+    fromPhone: sender.phone || data.fromPhone || data.from_phone,
+    toEmail: recipient.email || data.toEmail || data.to_email,
+    toName: toName,
+    toPhone: recipient.phone || data.toPhone || data.to_phone,
+    timestamp: data.timestamp || data.created_at || data.createdAt,
+    isRead: data.isRead || data.is_read || false,
+    attachments: data.attachments || [],
+    metadata: data.metadata || {},
+    createdAt: data.createdAt || data.created_at,
+  };
+};
 
 /**
  * Fetch conversations with optional filters

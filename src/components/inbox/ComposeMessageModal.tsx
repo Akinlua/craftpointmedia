@@ -47,7 +47,7 @@ export const ComposeMessageModal = ({
     setIsLoadingContacts(true);
     try {
       // Fetch all contacts (or first 100)
-      const result = await contactsApi.getContacts({}, 1, 100);
+      const result = await contactsApi.getContacts({ scope: 'organization' }, 1, 100);
       setContacts(result.data);
     } catch (error) {
       console.error('Failed to load contacts:', error);

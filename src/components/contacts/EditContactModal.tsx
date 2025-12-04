@@ -23,9 +23,9 @@ export const EditContactModal = ({ contact, open, onOpenChange, onUpdated }: Edi
   const [newTag, setNewTag] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Initialize form data when contact changes
+  // Initialize form data when contact changes or modal opens
   useEffect(() => {
-    if (contact) {
+    if (contact && open) {
       setFormData({
         firstName: contact.firstName,
         lastName: contact.lastName,
@@ -39,7 +39,7 @@ export const EditContactModal = ({ contact, open, onOpenChange, onUpdated }: Edi
         tags: [...contact.tags]
       });
     }
-  }, [contact]);
+  }, [contact, open]);
 
   const handleInputChange = (field: keyof Contact, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -64,7 +64,7 @@ export const EditContactModal = ({ contact, open, onOpenChange, onUpdated }: Edi
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!contact || !formData.firstName || !formData.lastName || !formData.email) {
       toast({
         title: "Validation Error",
@@ -172,8 +172,8 @@ export const EditContactModal = ({ contact, open, onOpenChange, onUpdated }: Edi
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select 
-                value={formData.status} 
+              <Select
+                value={formData.status}
                 onValueChange={(value) => handleInputChange('status', value as ContactStatus)}
               >
                 <SelectTrigger>
@@ -186,12 +186,12 @@ export const EditContactModal = ({ contact, open, onOpenChange, onUpdated }: Edi
                 </SelectContent>
               </Select>
             </div>
-            
+
             {formData.status === 'lead' && (
               <div className="space-y-2">
                 <Label>Lead Stage</Label>
-                <Select 
-                  value={formData.leadStage} 
+                <Select
+                  value={formData.leadStage}
                   onValueChange={(value) => handleInputChange('leadStage', value as LeadStage)}
                 >
                   <SelectTrigger>

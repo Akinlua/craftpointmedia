@@ -43,6 +43,7 @@ export interface ContactFilters {
     to: string;
   };
   search?: string;
+  scope?: 'personal' | 'organization';
 }
 
 export interface ContactBulkAction {

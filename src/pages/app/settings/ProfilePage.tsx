@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
+import {
   Form,
   FormControl,
   FormDescription,
@@ -28,6 +28,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Building, Upload, Save, Loader2 } from "lucide-react";
 import { settingsApi } from "@/lib/api/settings";
+import { uploadsApi } from "@/lib/api/uploads";
 import { useToast } from "@/hooks/use-toast";
 
 const profileSchema = z.object({
@@ -80,14 +81,14 @@ const industries = [
 
 const employeeCounts = [
   "1-10",
-  "11-50", 
+  "11-50",
   "51-200",
   "201-500",
   "500+",
 ];
 
 const ProfilePage = () => {
-  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -147,18 +148,53 @@ const ProfilePage = () => {
   });
 
   const onSubmit = (values: ProfileFormValues) => {
-    updateOrganization.mutate(values);
+    // Sanitize values before submission - remove empty strings and nulls
+    const sanitizedValues = Object.entries(values).reduce((acc, [key, value]) => {
+      if (value !== "" && value !== null && value !== undefined) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {} as any);
+
+    updateOrganization.mutate(sanitizedValues);
   };
 
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      setLogoFile(file);
-      // In a real app, you would upload the file here
+    if (!file) return;
+
+    // Validate file size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 2MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    try {
+      await uploadsApi.uploadOrganizationLogo(file);
+
+      // Invalidate query to refresh logo
+      queryClient.invalidateQueries({ queryKey: ['organization'] });
+
       toast({
         title: "Logo uploaded",
-        description: "Your organization logo has been updated.",
+        description: "Your organization logo has been updated successfully.",
       });
+    } catch (error) {
+      console.error('Logo upload failed:', error);
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Failed to upload logo",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingLogo(false);
+      // Reset input
+      event.target.value = '';
     }
   };
 
@@ -218,10 +254,14 @@ const ProfilePage = () => {
                 </Avatar>
                 <div>
                   <Label htmlFor="logo-upload" className="cursor-pointer">
-                    <Button variant="outline" asChild>
+                    <Button variant="outline" asChild disabled={isUploadingLogo}>
                       <span>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload Logo
+                        {isUploadingLogo ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Upload className="w-4 h-4 mr-2" />
+                        )}
+                        {isUploadingLogo ? "Uploading..." : "Upload Logo"}
                       </span>
                     </Button>
                   </Label>
@@ -314,10 +354,10 @@ const ProfilePage = () => {
                   <FormItem>
                     <FormLabel>Business Address</FormLabel>
                     <FormControl>
-                      <Textarea 
+                      <Textarea
                         placeholder="123 Business St, City, State, ZIP"
                         rows={3}
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -332,7 +372,7 @@ const ProfilePage = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Industry</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select industry" />
@@ -357,7 +397,7 @@ const ProfilePage = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Employee Count</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select employee count" />
@@ -395,7 +435,7 @@ const ProfilePage = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Timezone</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select timezone" />
@@ -423,7 +463,7 @@ const ProfilePage = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Currency</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select currency" />
@@ -449,8 +489,8 @@ const ProfilePage = () => {
           </Card>
 
           <div className="flex justify-end">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="btn-primary"
               disabled={updateOrganization.isPending}
             >

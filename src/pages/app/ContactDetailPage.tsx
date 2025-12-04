@@ -8,42 +8,68 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Contact, ContactTimeline } from "@/types/contact";
+import { Deal } from "@/types/deal";
 import { contactsApi } from "@/lib/api/contacts";
+import { dealsApi } from "@/lib/api/deals";
 import { canCurrentUser } from "@/lib/rbac/can";
 import { Role } from '@/lib/rbac/permissions';
 import { useSession } from "@/lib/hooks/useSession";
 import { EditContactModal } from "@/components/contacts/EditContactModal";
 import { DeleteConfirmationDialog } from "@/components/ui/delete-confirmation-dialog";
-import { 
-  ArrowLeft, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Edit, 
-  Trash2, 
+import {
+  ArrowLeft,
+  Mail,
+  Phone,
+  MapPin,
+  Edit,
+  Trash2,
   Archive,
   Calendar,
   FileText,
   CheckSquare,
   DollarSign,
-  MessageSquare
+  MessageSquare,
+  Plus
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow, format } from "date-fns";
+import { ComposeMessageModal } from "@/components/inbox/ComposeMessageModal";
+import { TaskForm } from "@/components/tasks/TaskForm";
+import { AddNoteModal } from "@/components/contacts/AddNoteModal";
+import { AddDealModal } from "@/components/deals/AddDealModal";
+import { teamApi } from "@/lib/api/team";
+import { tasksApi } from "@/lib/api/tasks";
 
 const ContactDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, profile, role } = useSession();
   const { toast } = useToast();
-  
+
   const [contact, setContact] = useState<Contact | null>(null);
   const [timeline, setTimeline] = useState<ContactTimeline[]>([]);
+  const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [timelineLoading, setTimelineLoading] = useState(false);
+  const [dealsLoading, setDealsLoading] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Quick Actions State
+  const [composeModalOpen, setComposeModalOpen] = useState(false);
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [noteModalOpen, setNoteModalOpen] = useState(false);
+  const [dealModalOpen, setDealModalOpen] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadTeam = async () => {
+      const members = await teamApi.getTeamMembers();
+      setTeamMembers(members.map(m => ({ id: m.id, name: `${m.firstName} ${m.lastName}`, avatar: m.avatar })));
+    };
+    loadTeam();
+  }, []);
 
   useEffect(() => {
     if (id) {
@@ -51,6 +77,12 @@ const ContactDetailPage = () => {
       loadTimeline(id);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (contact) {
+      loadDeals();
+    }
+  }, [contact]);
 
   const loadContact = async (contactId: string) => {
     try {
@@ -89,13 +121,32 @@ const ContactDetailPage = () => {
     }
   };
 
+  const loadDeals = async () => {
+    if (!contact) return;
+    try {
+      setDealsLoading(true);
+      // Fetch all deals and filter by contact ID client-side
+      // Ideally backend should support filtering by contactId
+      const { data } = await dealsApi.getDeals({}, 1, 100);
+      const contactDeals = data.filter(deal =>
+        deal.contactIds?.includes(contact.id) ||
+        deal.contacts?.some(c => c.id === contact.id)
+      );
+      setDeals(contactDeals);
+    } catch (error) {
+      console.error('Failed to load deals:', error);
+    } finally {
+      setDealsLoading(false);
+    }
+  };
+
   const handleEditContact = () => {
     setEditModalOpen(true);
   };
 
   const handleArchiveContact = async () => {
     if (!contact) return;
-    
+
     try {
       await contactsApi.updateContact(contact.id, { status: 'archived' });
       toast({
@@ -143,8 +194,36 @@ const ContactDetailPage = () => {
     }
   };
 
+  const handleSendEmail = () => setComposeModalOpen(true);
+
+  const handleMakeCall = () => {
+    if (contact?.phone) {
+      window.location.href = `tel:${contact.phone}`;
+    } else {
+      toast({ title: "No phone number", description: "This contact has no phone number listed.", variant: "destructive" });
+    }
+  };
+
+  const handleAddTask = () => setTaskModalOpen(true);
+  const handleAddNote = () => setNoteModalOpen(true);
+  const handleAddDeal = () => setDealModalOpen(true);
+
+  const handleCreateTask = async (data: any) => {
+    try {
+      await tasksApi.createTask({
+        ...data,
+        relatedType: 'contact',
+        relatedId: contact?.id
+      });
+      toast({ title: "Task created", description: "Task has been added successfully." });
+      setTaskModalOpen(false);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to create task", variant: "destructive" });
+    }
+  };
+
   const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    return `${(firstName || '').charAt(0)}${(lastName || '').charAt(0)}`.toUpperCase();
   };
 
   const getTagColor = (tag: string) => {
@@ -152,16 +231,16 @@ const ContactDetailPage = () => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
     }, 0);
-    
+
     const colors = [
       "bg-red-500/10 text-red-600 border-red-500/20",
-      "bg-blue-500/10 text-blue-600 border-blue-500/20", 
+      "bg-blue-500/10 text-blue-600 border-blue-500/20",
       "bg-green-500/10 text-green-600 border-green-500/20",
       "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
       "bg-purple-500/10 text-purple-600 border-purple-500/20",
       "bg-pink-500/10 text-pink-600 border-pink-500/20"
     ];
-    
+
     return colors[Math.abs(hash) % colors.length];
   };
 
@@ -201,9 +280,9 @@ const ContactDetailPage = () => {
         <div className="text-center">
           <h2 className="text-lg font-medium">Contact not found</h2>
           <p className="text-muted-foreground">The contact you're looking for doesn't exist.</p>
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/app/contacts')} 
+          <Button
+            variant="outline"
+            onClick={() => navigate('/app/contacts')}
             className="mt-4"
           >
             Back to Contacts
@@ -214,8 +293,8 @@ const ContactDetailPage = () => {
   }
 
   const canEdit = role ? canCurrentUser('update', 'contacts', role.role as Role) : false;
-  const canDelete = role ? (canCurrentUser('delete', 'contacts', role.role as Role) || 
-                   (profile?.id === contact.ownerId)) : false;
+  const canDelete = role ? (canCurrentUser('delete', 'contacts', role.role as Role) ||
+    (profile?.id === contact.ownerId)) : false;
 
   return (
     <div className="space-y-6">
@@ -248,7 +327,7 @@ const ContactDetailPage = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="flex gap-2">
           {canEdit && (
             <Button variant="outline" onClick={handleEditContact}>
@@ -322,16 +401,16 @@ const ContactDetailPage = () => {
                       </p>
                     </div>
                   </div>
-                  
+
                   <Separator />
-                  
+
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Tags</label>
                     <div className="flex gap-2 flex-wrap mt-2">
                       {contact.tags.map((tag) => (
-                        <Badge 
-                          key={tag} 
-                          variant="outline" 
+                        <Badge
+                          key={tag}
+                          variant="outline"
                           className={`${getTagColor(tag)} border`}
                         >
                           {tag}
@@ -377,7 +456,13 @@ const ContactDetailPage = () => {
                             <div className="flex items-center justify-between">
                               <h4 className="font-medium">{item.title}</h4>
                               <span className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
+                                {(() => {
+                                  try {
+                                    return formatDistanceToNow(new Date(item.createdAt), { addSuffix: true });
+                                  } catch (e) {
+                                    return '';
+                                  }
+                                })()}
                               </span>
                             </div>
                             {item.description && (
@@ -411,14 +496,44 @@ const ContactDetailPage = () => {
 
             <TabsContent value="deals">
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Deals</CardTitle>
+                  <Button size="sm" onClick={handleAddDeal}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Deal
+                  </Button>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <DollarSign className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No deals found</p>
-                  </div>
+                  {dealsLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(2)].map((_, i) => (
+                        <Skeleton key={i} className="h-20 w-full" />
+                      ))}
+                    </div>
+                  ) : deals.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <DollarSign className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No deals found</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {deals.map((deal) => (
+                        <div key={deal.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => navigate(`/app/deals?id=${deal.id}`)}> {/* Assuming we can navigate to deal detail or list with filter */}
+                          <div>
+                            <h4 className="font-medium">{deal.title}</h4>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {new Intl.NumberFormat('en-US', { style: 'currency', currency: deal.currency }).format(deal.value)}
+                              {' • '}
+                              <span className="capitalize">{deal.stage.replace('_', ' ')}</span>
+                            </p>
+                          </div>
+                          <Badge variant={deal.stage === 'closed_won' ? 'default' : deal.stage === 'closed_lost' ? 'destructive' : 'secondary'}>
+                            {deal.stage.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -449,43 +564,54 @@ const ContactDetailPage = () => {
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Status</label>
-                <Badge 
-                  variant="outline" 
-                  className={`mt-1 ${
-                    contact.status === 'lead' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' :
+                <Badge
+                  variant="outline"
+                  className={`mt-1 ${contact.status === 'lead' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' :
                     contact.status === 'customer' ? 'bg-success/10 text-success border-success/20' :
-                    'bg-muted text-muted-foreground border-muted'
-                  }`}
+                      'bg-muted text-muted-foreground border-muted'
+                    }`}
                 >
                   {contact.status}
                 </Badge>
               </div>
-              
+
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Owner</label>
                 <p className="mt-1">{contact.ownerName}</p>
               </div>
-              
+
               {contact.leadScore && (
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Lead Score</label>
                   <p className="mt-1 font-medium">{contact.leadScore}/100</p>
                 </div>
               )}
-              
+
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Created</label>
                 <p className="mt-1 text-sm flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  {format(new Date(contact.createdAt), 'MMM d, yyyy')}
+                  {(() => {
+                    try {
+                      return contact.createdAt ? format(new Date(contact.createdAt), 'MMM d, yyyy') : 'N/A';
+                    } catch (e) {
+                      return 'Invalid Date';
+                    }
+                  })()}
                 </p>
               </div>
-              
+
               {contact.lastContactAt && (
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Last Contact</label>
                   <p className="mt-1 text-sm">
-                    {formatDistanceToNow(new Date(contact.lastContactAt), { addSuffix: true })}
+                    {(() => {
+                      try {
+                        return formatDistanceToNow(new Date(contact.lastContactAt), { addSuffix: true });
+                      } catch (e) {
+                        return 'Invalid Date';
+                      }
+                    })()}
                   </p>
                 </div>
               )}
@@ -498,19 +624,19 @@ const ContactDetailPage = () => {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={handleSendEmail}>
                 <Mail className="w-4 h-4" />
                 Send Email
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={handleMakeCall}>
                 <Phone className="w-4 h-4" />
                 Make Call
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={handleAddTask}>
                 <CheckSquare className="w-4 h-4" />
                 Add Task
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button variant="outline" className="w-full justify-start" onClick={handleAddNote}>
                 <FileText className="w-4 h-4" />
                 Add Note
               </Button>
@@ -526,7 +652,7 @@ const ContactDetailPage = () => {
         onOpenChange={setEditModalOpen}
         onUpdated={() => contact && loadContact(contact.id)}
       />
-      
+
       <DeleteConfirmationDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
@@ -534,6 +660,32 @@ const ContactDetailPage = () => {
         itemName={contact ? `${contact.firstName} ${contact.lastName}` : 'contact'}
         isLoading={isDeleting}
         description="This action cannot be undone. All associated data will be permanently removed."
+      />
+
+      <ComposeMessageModal
+        open={composeModalOpen}
+        onOpenChange={setComposeModalOpen}
+        preselectedContactId={contact?.id}
+      />
+
+      <TaskForm
+        open={taskModalOpen}
+        onOpenChange={setTaskModalOpen}
+        onSubmit={handleCreateTask}
+        users={teamMembers}
+      />
+
+      <AddNoteModal
+        contact={contact}
+        open={noteModalOpen}
+        onOpenChange={setNoteModalOpen}
+        onUpdated={() => contact && loadContact(contact.id)}
+      />
+
+      <AddDealModal
+        open={dealModalOpen}
+        onOpenChange={setDealModalOpen}
+        preselectedContactId={contact?.id}
       />
     </div>
   );

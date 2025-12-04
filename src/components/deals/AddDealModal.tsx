@@ -242,7 +242,7 @@ export const AddDealModal = ({
                 onValueChange={(value) => handleInputChange('ownerId', value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a team member" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {users.length === 0 ? (

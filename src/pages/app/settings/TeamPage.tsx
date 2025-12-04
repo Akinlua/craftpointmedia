@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { 
+import {
   Form,
   FormControl,
   FormDescription,
@@ -56,7 +56,7 @@ const TeamPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { profile, organization, role } = useSession();
-  
+
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [pendingInvites, setPendingInvites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,15 +66,34 @@ const TeamPage = () => {
     loadTeamData();
   }, []);
 
+  // Check if current user can manage team (only owner)
+  const canManageTeam = role?.role === 'owner';
+  const canViewTeam = true; // Everyone can view team members
+
   const loadTeamData = async () => {
     setLoading(true);
     try {
-      const [members, invites] = await Promise.all([
-        teamApi.getTeamMembers(),
-        teamApi.getPendingInvitations()
-      ]);
-      setTeamMembers(members);
-      setPendingInvites(invites);
+      // Always fetch team members
+      try {
+        const members = await teamApi.getTeamMembers();
+        setTeamMembers(members);
+      } catch (error) {
+        console.error('Failed to load team members:', error);
+        // Don't show toast here to avoid spamming if it's a minor permission issue
+      }
+
+      // Only fetch invites if user is owner
+      if (canManageTeam) {
+        try {
+          const invites = await teamApi.getPendingInvitations();
+          setPendingInvites(invites);
+        } catch (error) {
+          console.error('Failed to load invites:', error);
+          // Silent fail for invites if main content loads
+        }
+      } else {
+        setPendingInvites([]);
+      }
     } catch (error) {
       console.error('Error loading team data:', error);
       toast({
@@ -104,7 +123,7 @@ const TeamPage = () => {
         role: values.role,
         message: values.message,
       });
-      
+
       toast({
         title: "Invitation sent!",
         description: `Invitation sent to ${values.email}. They will receive an email to join your team.`,
@@ -140,9 +159,6 @@ const TeamPage = () => {
     }
   };
 
-  // Check if current user can manage team (only owner and manager)
-  const canManageTeam = role ? (role.role === 'owner' || role.role === 'manager') : false;
-
   if (loading) {
     return (
       <div className="space-y-6">
@@ -175,12 +191,12 @@ const TeamPage = () => {
         </div>
         {canManageTeam && (
           <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="btn-primary">
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Invite Team Member
-                </Button>
-              </DialogTrigger>
+            <DialogTrigger asChild>
+              <Button className="btn-primary">
+                <UserPlus className="w-4 h-4 mr-2" />
+                Invite Team Member
+              </Button>
+            </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Invite Team Member</DialogTitle>
@@ -188,7 +204,7 @@ const TeamPage = () => {
                   Send an invitation to add a new member to your team.
                 </DialogDescription>
               </DialogHeader>
-              
+
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <FormField
@@ -198,10 +214,10 @@ const TeamPage = () => {
                       <FormItem>
                         <FormLabel>Email Address</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="email" 
-                            placeholder="teammate@company.com" 
-                            {...field} 
+                          <Input
+                            type="email"
+                            placeholder="teammate@company.com"
+                            {...field}
                           />
                         </FormControl>
                         <FormDescription>
@@ -257,10 +273,10 @@ const TeamPage = () => {
                       <FormItem>
                         <FormLabel>Personal Message (Optional)</FormLabel>
                         <FormControl>
-                          <Textarea 
+                          <Textarea
                             placeholder="Welcome to our team! We're excited to have you join us..."
                             rows={3}
-                            {...field} 
+                            {...field}
                           />
                         </FormControl>
                         <FormDescription>
@@ -272,16 +288,16 @@ const TeamPage = () => {
                   />
 
                   <DialogFooter>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
+                    <Button
+                      type="button"
+                      variant="outline"
                       onClick={() => setInviteDialogOpen(false)}
                       disabled={isSubmitting}
                     >
                       Cancel
                     </Button>
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="btn-primary"
                       disabled={isSubmitting}
                     >
@@ -301,7 +317,7 @@ const TeamPage = () => {
                 </form>
               </Form>
             </DialogContent>
-           </Dialog>
+          </Dialog>
         )}
       </div>
 
@@ -318,7 +334,7 @@ const TeamPage = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="card-subtle">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -332,7 +348,7 @@ const TeamPage = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="card-subtle">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -361,8 +377,8 @@ const TeamPage = () => {
         </CardHeader>
         <CardContent>
           {teamMembers && teamMembers.length > 0 ? (
-            <TeamTable 
-              members={teamMembers} 
+            <TeamTable
+              members={teamMembers}
               currentUserId={profile?.id}
               onUpdate={loadTeamData}
             />
@@ -471,7 +487,7 @@ const TeamPage = () => {
                 Full access to all features including billing, user management, and organization settings.
               </p>
             </div>
-            
+
             <div className="space-y-2">
               <h4 className="font-medium flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-secondary"></div>
@@ -481,7 +497,7 @@ const TeamPage = () => {
                 Can manage contacts, deals, campaigns, and view reports. Cannot manage users or billing.
               </p>
             </div>
-            
+
             <div className="space-y-2">
               <h4 className="font-medium flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-muted"></div>

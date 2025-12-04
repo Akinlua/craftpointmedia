@@ -11,7 +11,9 @@ import MessageComposer from '@/components/inbox/MessageComposer';
 import ContactContextPanel from '@/components/inbox/ContactContextPanel';
 import InboxFilters from '@/components/inbox/InboxFilters';
 import { ComposeMessageModal } from '@/components/inbox/ComposeMessageModal';
+import { AddDealModal } from '@/components/deals/AddDealModal';
 import { useInboxStore } from '@/lib/stores/inboxStore';
+import { useNavigate } from 'react-router-dom';
 
 import { fetchConversations, fetchMessages, sendMessage, markAsRead } from '@/lib/api/inbox';
 import { useSession } from '@/lib/hooks/useSession';
@@ -33,7 +35,9 @@ const InboxPage = () => {
 
   const { role } = useSession();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [showComposeModal, setShowComposeModal] = useState(false);
+  const [showDealModal, setShowDealModal] = useState(false);
 
   // Fetch conversations
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery({
@@ -82,6 +86,16 @@ const InboxPage = () => {
       conversationId: selectedConversationId,
       content,
     });
+  };
+
+  const handleViewContact = () => {
+    if (selectedConversation?.contactId) {
+      navigate(`/app/contacts/${selectedConversation.contactId}`);
+    }
+  };
+
+  const handleCreateDeal = () => {
+    setShowDealModal(true);
   };
 
   const canSendMessages = role ? canCurrentUser('create', 'messages', role.role as Role) : false;
@@ -166,8 +180,8 @@ const InboxPage = () => {
               <ResizablePanel defaultSize={25} minSize={20}>
                 <ContactContextPanel
                   conversation={selectedConversation}
-                  onViewContact={() => { }}
-                  onCreateDeal={() => { }}
+                  onViewContact={handleViewContact}
+                  onCreateDeal={handleCreateDeal}
                 />
               </ResizablePanel>
             </>
@@ -179,6 +193,13 @@ const InboxPage = () => {
       <ComposeMessageModal
         open={showComposeModal}
         onOpenChange={setShowComposeModal}
+      />
+
+      {/* Add Deal Modal */}
+      <AddDealModal
+        open={showDealModal}
+        onOpenChange={setShowDealModal}
+        preselectedContactId={selectedConversation?.contactId}
       />
     </div>
   );

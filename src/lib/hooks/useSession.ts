@@ -79,6 +79,8 @@ export const useSession = create<SessionStore>((set, get) => ({
       }
       const raw = await response.json();
       const userData = raw.message?.user || raw.data?.user || raw.data || raw.user || raw;
+      const orgData = raw.message?.org || raw.data?.org || raw.organization || raw.org || userData.organization;
+
       const mappedProfile: Profile = {
         id: userData.id,
         org_id: userData.organization?.id || '',
@@ -90,11 +92,21 @@ export const useSession = create<SessionStore>((set, get) => ({
         job_title: null,
         status: userData.status === 'active' ? 'active' : 'inactive',
       };
+
+      const mappedOrg: Organization | null = orgData ? {
+        id: orgData.id,
+        name: orgData.name,
+        domain: orgData.domain || null,
+        industry: orgData.industry || null,
+        owner_id: orgData.ownerId || orgData.owner_id || null,
+        plan: orgData.plan || 'free',
+      } : null;
+
       const mappedRole: UserRole = { role: userData.role };
       set({
         user: null,
         profile: mappedProfile,
-        organization: null,
+        organization: mappedOrg,
         role: mappedRole,
         isAuthenticated: true,
         isLoading: false,
@@ -143,7 +155,61 @@ export const useSession = create<SessionStore>((set, get) => ({
   updateProfile: async (updates: Partial<Profile>) => {
     const { profile } = get();
     if (!profile) return;
-    set({ profile: { ...profile, ...updates } });
+
+    try {
+      set({ isLoading: true });
+      const token = localStorage.getItem('AUTH_TOKEN');
+      if (!token) throw new Error('Not authenticated');
+
+      // Map snake_case to camelCase for API and filter empty values
+      const apiUpdates: any = {};
+
+      if (updates.first_name) apiUpdates.firstName = updates.first_name;
+      if (updates.last_name) apiUpdates.lastName = updates.last_name;
+      if (updates.phone) apiUpdates.phone = updates.phone;
+
+      // Add other fields if they exist and are not empty
+      Object.keys(updates).forEach(key => {
+        if (key !== 'first_name' && key !== 'last_name' && key !== 'phone') {
+          const value = (updates as any)[key];
+          if (value !== '' && value !== null && value !== undefined) {
+            apiUpdates[key] = value;
+          }
+        }
+      });
+
+      const response = await fetch(`${ENV.API_BASE_URL}${API_ENDPOINTS.SETTINGS.PROFILE}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(apiUpdates),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Update profile error:', errorData);
+
+        // Handle validation errors
+        const message = errorData.error?.message || errorData.message || 'Failed to update profile';
+
+        // Check for field-specific validation errors
+        const fieldError = errorData.error?.details?.fields?.[0]?.message;
+        const detailError = errorData.error?.details?.details?.[0]?.msg;
+
+        const validationMsg = fieldError || detailError;
+
+        throw new Error(validationMsg ? `${message}: ${validationMsg}` : message);
+      }
+
+      // Update local state
+      set({ profile: { ...profile, ...updates }, isLoading: false });
+    } catch (error) {
+      console.error('Update profile error:', error);
+      set({ isLoading: false });
+      throw error;
+    }
   },
 
   hasRole: (role: 'owner' | 'manager' | 'staff') => {

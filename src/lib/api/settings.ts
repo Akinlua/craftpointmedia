@@ -217,7 +217,8 @@ export const settingsApi = {
 
     if (!response.ok) throw new Error('Failed to fetch organization');
 
-    const org = await response.json();
+    const result = await response.json();
+    const org = result.data || result;
 
     // Map database fields to Organization type
     return {
@@ -226,17 +227,17 @@ export const settingsApi = {
       domain: org.domain || undefined,
       logo: org.logo,
       favicon: org.favicon,
-      primaryColor: org.primaryColor || '#3B82F6',
-      secondaryColor: org.secondaryColor || '#10B981',
+      primaryColor: org.primaryColor || org.primary_color || '#3B82F6',
+      secondaryColor: org.secondaryColor || org.secondary_color || '#10B981',
       timezone: org.timezone || 'America/New_York',
       currency: org.currency || 'USD',
-      contactEmail: org.contactEmail || org.name + '@example.com',
-      contactPhone: org.contactPhone,
+      contactEmail: org.contactEmail || org.contact_email || (org.name ? `${org.name.toLowerCase().replace(/\s+/g, '.')}@example.com` : ''),
+      contactPhone: org.contactPhone || org.contact_phone,
       address: org.address,
       website: org.website,
       industry: org.industry || undefined,
-      employeeCount: org.employeeCount,
-      whiteLabel: org.whiteLabel || {
+      employeeCount: org.employeeCount || org.employee_count,
+      whiteLabel: org.whiteLabel || org.white_label || {
         enabled: false,
         hideBranding: false,
       },
@@ -258,26 +259,40 @@ export const settingsApi = {
       body: JSON.stringify(updates)
     });
 
-    if (!response.ok) throw new Error('Failed to update organization');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Update organization error:', errorData);
 
-    const org = await response.json();
+      // Handle validation errors specifically if possible, or just return the main message
+      const message = errorData.error?.message || errorData.message || 'Failed to update organization';
+
+      // If there are specific validation details, we could append them, but for now let's stick to the main message
+      // or try to find the first validation error
+      const validationMsg = errorData.error?.details?.details?.[0]?.msg;
+
+      throw new Error(validationMsg ? `${message}: ${validationMsg}` : message);
+    }
+
+    const result = await response.json();
+    const org = result.data || result;
+
     return {
       id: org.id,
       name: org.name,
       domain: org.domain || undefined,
       logo: org.logo,
       favicon: org.favicon,
-      primaryColor: org.primaryColor || '#3B82F6',
-      secondaryColor: org.secondaryColor || '#10B981',
+      primaryColor: org.primaryColor || org.primary_color || '#3B82F6',
+      secondaryColor: org.secondaryColor || org.secondary_color || '#10B981',
       timezone: org.timezone || 'America/New_York',
       currency: org.currency || 'USD',
-      contactEmail: org.contactEmail || org.name + '@example.com',
-      contactPhone: org.contactPhone,
+      contactEmail: org.contactEmail || org.contact_email || (org.name ? `${org.name.toLowerCase().replace(/\s+/g, '.')}@example.com` : ''),
+      contactPhone: org.contactPhone || org.contact_phone,
       address: org.address,
       website: org.website,
       industry: org.industry || undefined,
-      employeeCount: org.employeeCount,
-      whiteLabel: org.whiteLabel || {
+      employeeCount: org.employeeCount || org.employee_count,
+      whiteLabel: org.whiteLabel || org.white_label || {
         enabled: false,
         hideBranding: false,
       },

@@ -93,7 +93,7 @@ export const uploadsApi = {
         if (!token) throw new Error('Not authenticated');
 
         const formData = new FormData();
-        formData.append('logo', file);
+        formData.append('file', file);
 
         const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.UPLOAD.LOGO}`;
         console.log('Uploading organization logo to:', url);

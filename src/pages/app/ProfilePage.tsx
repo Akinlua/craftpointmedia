@@ -16,7 +16,7 @@ const ProfilePage = () => {
   const navigate = useNavigate();
   const { profile, organization, updateProfile } = useSession();
   const { toast } = useToast();
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     first_name: profile?.first_name || '',
@@ -47,7 +47,7 @@ const ProfilePage = () => {
       }
       if (!formData.currentPassword) {
         toast({
-          title: "Error", 
+          title: "Error",
           description: "Current password is required to change password",
           variant: "destructive"
         });
@@ -56,25 +56,33 @@ const ProfilePage = () => {
     }
 
     // Update profile
-    await updateProfile({
-      first_name: formData.first_name,
-      last_name: formData.last_name,
-      phone: formData.phone,
-    });
+    try {
+      await updateProfile({
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        phone: formData.phone,
+      });
 
-    setIsEditing(false);
-    toast({
-      title: "Profile updated",
-      description: "Your profile has been saved successfully"
-    });
+      setIsEditing(false);
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been saved successfully"
+      });
 
-    // Clear password fields
-    setFormData(prev => ({
-      ...prev,
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    }));
+      // Clear password fields
+      setFormData(prev => ({
+        ...prev,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      }));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update profile",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleCancel = () => {
@@ -130,7 +138,7 @@ const ProfilePage = () => {
             </p>
           </div>
         </div>
-        
+
         {!isEditing ? (
           <Button onClick={() => setIsEditing(true)}>
             <Edit className="w-4 h-4 mr-2" />
@@ -168,8 +176,8 @@ const ProfilePage = () => {
                 <div>
                   <h3 className="text-lg font-semibold">{profile.first_name} {profile.last_name}</h3>
                   <p className="text-muted-foreground">{profile.email}</p>
-                  <Badge 
-                    variant="outline" 
+                  <Badge
+                    variant="outline"
                     className="mt-1 bg-primary/10 text-primary border-primary/20"
                   >
                     {profile.status}
@@ -275,7 +283,7 @@ const ProfilePage = () => {
                 <Label className="text-sm font-medium text-muted-foreground">Organization</Label>
                 <p className="mt-1 font-medium">{organization?.name}</p>
               </div>
-              
+
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Domain</Label>
                 <p className="mt-1 text-muted-foreground">{organization?.domain || 'Not set'}</p>

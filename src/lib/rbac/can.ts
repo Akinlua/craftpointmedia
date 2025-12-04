@@ -28,6 +28,7 @@ const permissions: Record<Role, Record<string, string[]>> = {
     campaigns: ['create', 'read', 'update'],
     templates: ['create', 'read', 'update'],
     automations: ['create', 'read', 'update'],
+    messages: ['create', 'read', 'update', 'delete'],
   },
   staff: {
     users: [],
@@ -41,6 +42,7 @@ const permissions: Record<Role, Record<string, string[]>> = {
     campaigns: ['read'],
     templates: ['read'],
     automations: ['read'],
+    messages: ['create', 'read', 'update'],
   },
 };
 

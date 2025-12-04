@@ -41,6 +41,7 @@ export const contactsApi = {
     if (filters?.tags?.length) queryParams.append('tags', filters.tags.join(','));
     if (filters?.location) queryParams.append('location', filters.location);
     if (filters?.search) queryParams.append('search', filters.search);
+    if (filters?.scope) queryParams.append('scope', filters.scope);
 
     const url = `${ENV.API_BASE_URL}${API_ENDPOINTS.CONTACTS.BASE}?${queryParams.toString()}`;
     console.log('Fetching contacts from:', url);
@@ -89,8 +90,10 @@ export const contactsApi = {
     if (response.status === 404) return null;
     if (!response.ok) throw new Error('Failed to fetch contact');
 
-    const data = await response.json();
-    return transformContact(data);
+    const result = await response.json();
+    // Handle { success: true, data: { contact: {...} } } or { data: {...} } or direct object
+    const contactData = result.data?.contact || result.data || result;
+    return transformContact(contactData);
   },
 
   // Update contact
@@ -125,8 +128,10 @@ export const contactsApi = {
 
     if (!response.ok) throw new Error('Failed to fetch timeline');
 
-    const data = await response.json();
-    return (data || []).map((item: any) => ({
+    const result = await response.json();
+    const timelineData = Array.isArray(result) ? result : (result.data || []);
+
+    return (Array.isArray(timelineData) ? timelineData : []).map((item: any) => ({
       id: item.id,
       contactId: item.contactId || item.contact_id,
       type: item.type,
